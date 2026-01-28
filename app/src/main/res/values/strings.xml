@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Mozika</string>
+
+    <!-- Permissions -->
+    <string name="permission_required_title">Permission requise</string>
+    <string name="permission_required_message">Cette application a besoin d\'accéder à vos fichiers audio pour fonctionner correctement. Veuillez accorder la permission pour continuer.</string>
+    <string name="grant_permission">Accorder la permission</string>
+</resources>
