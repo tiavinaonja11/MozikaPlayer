@@ -1,8 +1,13 @@
 package com.example.mozika.ui.player.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,66 +24,64 @@ fun SeekBar(
     duration: Float,
     onSeek: (Float) -> Unit
 ) {
+    val rawProgress = if (duration > 0f) (progress / duration) else 0f
+    val currentProgress = rawProgress.coerceIn(0f, 1f)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(32.dp)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    val percent = offset.x / size.width
-                    onSeek(percent.coerceIn(0f, 1f))
+                    val percent = (offset.x / size.width).coerceIn(0f, 1f)
+                    onSeek(percent)
                 }
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        val currentProgress = if (duration > 0f) progress / duration else 0f
-
-        // Barre de fond
+        // Track arrière
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(4.dp)
-                .background(Color(0xFF404040))
                 .clip(CircleShape)
+                .background(Color(0xFFE0E0E0))
         )
 
-        // Barre de progression
+        // Track rempli
         Box(
             modifier = Modifier
                 .fillMaxWidth(currentProgress)
                 .height(4.dp)
+                .clip(CircleShape)
                 .background(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xFF1DB954),
-                            Color(0xFF1ED760)
+                        listOf(
+                            Color(0xFF4DA3FF),
+                            Color(0xFF9CCDFF)
                         )
                     )
                 )
-                .clip(CircleShape)
         )
 
-        // Utiliser un Spacer avec un poids pour positionner le bouton
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        // Thumb sans weight
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = (currentProgress * 300f).dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Spacer(
-                modifier = Modifier
-                    .weight(currentProgress)
-                    .height(0.dp)
-            )
-
             Box(
                 modifier = Modifier
-                    .size(16.dp)
-                    .background(Color.White, CircleShape)
-            )
-
-            Spacer(
-                modifier = Modifier
-                    .weight(1f - currentProgress)
-                    .height(0.dp)
+                    .height(20.dp)
+                    .width(20.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(
+                        width = 2.dp,
+                        color = Color(0xFF4DA3FF),
+                        shape = CircleShape
+                    )
             )
         }
     }

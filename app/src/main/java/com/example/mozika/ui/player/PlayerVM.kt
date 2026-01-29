@@ -1,14 +1,19 @@
 package com.example.mozika.ui.player
 
+import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.mozika.ui.player.AudioWaveformAnalyzer
 import com.example.mozika.data.repo.TrackRepo
 import com.example.mozika.domain.model.Track as DomainTrack
 import com.example.mozika.domain.usecase.GenWaveform
@@ -19,6 +24,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(UnstableApi::class)
 @HiltViewModel
 class PlayerVM @Inject constructor(
     private val exoPlayer: ExoPlayer,
@@ -26,10 +32,10 @@ class PlayerVM @Inject constructor(
     private val trackRepo: TrackRepo
 ) : ViewModel() {
 
-    var position by mutableStateOf(0L)
+    var position by mutableLongStateOf(0L)
         private set
 
-    var duration by mutableStateOf(0L)
+    var duration by mutableLongStateOf(0L)
         private set
 
     var isPlaying by mutableStateOf(false)
@@ -51,7 +57,9 @@ class PlayerVM @Inject constructor(
         private set
 
     private var updateJob: Job? = null
-    private var originalPlaylist = emptyList<DomainTrack>()
+    private var originalPlaylist: List<DomainTrack> = emptyList()
+
+    private var analyzer: AudioWaveformAnalyzer? = null
 
     init {
         setupPlayerListeners()
@@ -64,8 +72,6 @@ class PlayerVM @Inject constructor(
             trackRepo.tracks().collect { tracks ->
                 playlist = tracks
                 originalPlaylist = tracks
-
-                // Si aucune piste n'est en cours de lecture et qu'il y a des pistes, charger la première
                 if (currentTrack == null && tracks.isNotEmpty()) {
                     load(tracks.first().id)
                 }
@@ -75,6 +81,7 @@ class PlayerVM @Inject constructor(
 
     private fun setupPlayerListeners() {
         exoPlayer.addListener(object : Player.Listener {
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_ENDED -> {
@@ -86,6 +93,22 @@ class PlayerVM @Inject constructor(
                             else -> nextTrack()
                         }
                     }
+                    Player.STATE_READY -> {
+                        // tu peux gérer READY si tu veux (buffer fini)
+                    }
+                    Player.STATE_BUFFERING -> {
+                        // buffering (afficher un loader si besoin)
+                    }
+                    Player.STATE_IDLE -> {
+                        // player à l'arrêt sans média
+                    }
+                }
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                this@PlayerVM.isPlaying = isPlaying
+                if (isPlaying) {
+                    startWaveformAnalyzer()
                 }
             }
 
@@ -100,7 +123,7 @@ class PlayerVM @Inject constructor(
         updateJob = viewModelScope.launch {
             while (true) {
                 updatePlayerState()
-                delay(200)
+                delay(80)
             }
         }
     }
@@ -111,42 +134,70 @@ class PlayerVM @Inject constructor(
         isPlaying = exoPlayer.isPlaying
     }
 
+    private fun startWaveformAnalyzer() {
+        val sessionId = exoPlayer.audioSessionId
+        if (sessionId == C.AUDIO_SESSION_ID_UNSET) return
+
+        if (analyzer == null) {
+            analyzer = AudioWaveformAnalyzer(sessionId)
+        }
+        analyzer?.start { amps ->
+            waveform = downSampleAndSmooth(amps)
+        }
+    }
+
+    private fun downSampleAndSmooth(src: IntArray): IntArray {
+        val target = 200
+        if (src.isEmpty()) return intArrayOf()
+
+        val step = src.size.toFloat() / target
+        val out = IntArray(target)
+        var pos = 0f
+
+        for (i in 0 until target) {
+            val idx = pos.toInt().coerceIn(0, src.lastIndex)
+            out[i] = src[idx]
+            pos += step
+        }
+
+        for (i in 1 until out.size - 1) {
+            out[i] = ((out[i - 1] + out[i] + out[i + 1]) / 3f).toInt()
+        }
+
+        return out
+    }
+
     fun load(trackId: Long) {
         viewModelScope.launch {
             try {
-                // Chercher la piste dans la playlist existante
                 val track = playlist.find { it.id == trackId }
-                    ?: // Si pas trouvé, chercher dans le repository
-                    trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
+                    ?: trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
                     ?: throw Exception("Track not found")
 
                 currentTrack = track
 
-                // Charger dans ExoPlayer
                 val mediaItem = MediaItem.fromUri(track.data)
                 exoPlayer.setMediaItem(mediaItem)
                 exoPlayer.prepare()
                 exoPlayer.play()
 
-                // Générer le waveform
-                try {
-                    waveform = genWaveform(trackId)
+                // valeur initiale (fallback si Visualizer ne marche pas)
+                waveform = try {
+                    genWaveform(trackId)
                 } catch (e: Exception) {
-                    // Fallback: waveform factice basé sur la durée
-                    waveform = createFallbackWaveform(track.duration)
+                    createFallbackWaveform()
                 }
+
             } catch (e: Exception) {
                 e.printStackTrace()
-                // Fallback: utiliser une piste factice
                 currentTrack = createFallbackTrack(trackId)
-                waveform = createFallbackWaveform(180000)
+                waveform = createFallbackWaveform()
             }
         }
     }
 
-    private fun createFallbackWaveform(duration: Int): IntArray {
-        val durationInSeconds = duration / 1000
-        val barCount = 200 // Nombre de barres dans le waveform
+    private fun createFallbackWaveform(): IntArray {
+        val barCount = 200
         return IntArray(barCount) { index ->
             val position = index % 40
             when {
@@ -172,11 +223,11 @@ class PlayerVM @Inject constructor(
 
     fun nextTrack() {
         if (playlist.isEmpty()) return
-
         currentTrack?.let { current ->
             val currentIndex = playlist.indexOfFirst { it.id == current.id }
             if (currentIndex != -1) {
-                val nextIndex = if (currentIndex < playlist.size - 1) currentIndex + 1 else 0
+                val nextIndex =
+                    if (currentIndex < playlist.size - 1) currentIndex + 1 else 0
                 load(playlist[nextIndex].id)
             } else {
                 load(playlist[0].id)
@@ -188,11 +239,11 @@ class PlayerVM @Inject constructor(
 
     fun previousTrack() {
         if (playlist.isEmpty()) return
-
         currentTrack?.let { current ->
             val currentIndex = playlist.indexOfFirst { it.id == current.id }
             if (currentIndex != -1) {
-                val prevIndex = if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
+                val prevIndex =
+                    if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
                 load(playlist[prevIndex].id)
             }
         }
@@ -210,23 +261,15 @@ class PlayerVM @Inject constructor(
     fun toggleShuffle() {
         shuffleMode = !shuffleMode
         if (shuffleMode) {
-            // Sauvegarder la piste courante avant de mélanger
             val currentTrackId = currentTrack?.id
-
-            // Mélanger la playlist
             playlist = playlist.shuffled()
-
-            // Recharger la piste courante à sa nouvelle position
-            currentTrackId?.let { trackId ->
-                playlist.find { it.id == trackId }?.let { track ->
+            currentTrackId?.let { id ->
+                playlist.find { it.id == id }?.let { track ->
                     currentTrack = track
                 }
             }
         } else {
-            // Restaurer l'ordre original
             playlist = originalPlaylist
-
-            // Recharger la piste courante à sa position originale
             currentTrack?.let { track ->
                 originalPlaylist.find { it.id == track.id }?.let { originalTrack ->
                     currentTrack = originalTrack
@@ -242,7 +285,6 @@ class PlayerVM @Inject constructor(
             RepeatMode.ONE -> RepeatMode.OFF
         }
 
-        // Appliquer le mode répétition à ExoPlayer
         exoPlayer.repeatMode = when (repeatMode) {
             RepeatMode.OFF -> Player.REPEAT_MODE_OFF
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
@@ -257,7 +299,6 @@ class PlayerVM @Inject constructor(
     fun shareTrack() {
         viewModelScope.launch {
             currentTrack?.let { track ->
-                // TODO: Implémenter avec ShareCompat
                 println("Partage de la piste: ${track.title} - ${track.artist}")
             }
         }
@@ -266,8 +307,6 @@ class PlayerVM @Inject constructor(
     fun toggleFavorite() {
         viewModelScope.launch {
             currentTrack?.let { track ->
-                // TODO: Implémenter la logique de favoris dans TrackRepo
-                // Pour l'instant, juste un log
                 println("Favori basculé pour: ${track.title}")
             }
         }
@@ -276,7 +315,6 @@ class PlayerVM @Inject constructor(
     fun addToPlaylist() {
         viewModelScope.launch {
             currentTrack?.let { track ->
-                // TODO: Implémenter l'ajout à une playlist utilisateur
                 println("Ajout à la playlist: ${track.title}")
             }
         }
@@ -286,7 +324,6 @@ class PlayerVM @Inject constructor(
         viewModelScope.launch {
             try {
                 trackRepo.refreshTracks()
-                // La playlist sera automatiquement mise à jour via le Flow
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -296,7 +333,6 @@ class PlayerVM @Inject constructor(
     fun searchTracks(query: String) {
         viewModelScope.launch {
             if (query.isBlank()) {
-                // Si la recherche est vide, revenir à toutes les pistes
                 trackRepo.tracks().collect { tracks ->
                     playlist = tracks
                     originalPlaylist = tracks
@@ -313,6 +349,7 @@ class PlayerVM @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         updateJob?.cancel()
+        analyzer?.stop()
         exoPlayer.release()
     }
 
