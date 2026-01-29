@@ -98,7 +98,7 @@ fun LibraryScreen(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.5.sp
                                 ),
-                                color = MaterialTheme.colorScheme.primary
+                                color = Color.White
                             )
                         }
 
@@ -108,7 +108,7 @@ fun LibraryScreen(
                                     .fillMaxWidth(0.92f)
                                     .height(48.dp),
                                 shape = RoundedCornerShape(24.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                color = Color(0x20FFFFFF),
                                 tonalElevation = 1.dp
                             ) {
                                 Row(
@@ -120,15 +120,15 @@ fun LibraryScreen(
                                     Icon(
                                         Icons.Rounded.Search,
                                         contentDescription = "Rechercher",
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        tint = Color(0xFFB3B3B3),
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
                                         text = if (query.isEmpty()) "Rechercher chansons, albums..." else query,
                                         style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = if (query.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                            else MaterialTheme.colorScheme.onSurface,
+                                            color = if (query.isEmpty()) Color(0xFF808080)
+                                            else Color.White,
                                             fontWeight = if (query.isEmpty()) FontWeight.Normal else FontWeight.Medium
                                         ),
                                         maxLines = 1,
@@ -141,8 +141,8 @@ fun LibraryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background
+                    containerColor = Color(0xFF121212),
+                    scrolledContainerColor = Color(0xFF121212)
                 ),
                 actions = {
                     IconButton(
@@ -154,7 +154,7 @@ fun LibraryScreen(
                         Icon(
                             imageVector = if (isSearchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
                             contentDescription = if (isSearchVisible) "Fermer la recherche" else "Rechercher",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -166,14 +166,14 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shadowElevation = 8.dp,
                 tonalElevation = 3.dp,
-                color = MaterialTheme.colorScheme.surface
+                color = Color(0xFF1E1E1E)
             ) {
                 NavigationBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(70.dp),
                     containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    contentColor = Color.White
                 ) {
                     bottomNavItems.forEachIndexed { index, item ->
                         NavigationBarItem(
@@ -202,22 +202,23 @@ fun LibraryScreen(
                                 }
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                selectedIconColor = Color(0xFF1DB954),
+                                selectedTextColor = Color(0xFF1DB954),
+                                unselectedIconColor = Color(0xFFB3B3B3),
+                                unselectedTextColor = Color(0xFFB3B3B3),
+                                indicatorColor = Color(0xFF1DB954).copy(alpha = 0.2f)
                             )
                         )
                     }
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = Color(0xFF121212)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFF121212))
                 .padding(paddingValues)
         ) {
             scanResult?.let { result ->
@@ -227,7 +228,7 @@ fun LibraryScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                         .shadow(2.dp, RoundedCornerShape(12.dp)),
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                    color = Color(0xFF1DB954).copy(alpha = 0.2f),
                     tonalElevation = 2.dp
                 ) {
                     Row(
@@ -239,7 +240,7 @@ fun LibraryScreen(
                         Icon(
                             imageVector = Icons.Rounded.Check,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = Color(0xFF1DB954),
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -248,7 +249,7 @@ fun LibraryScreen(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Medium
                             ),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color.White
                         )
                     }
                 }
@@ -260,7 +261,7 @@ fun LibraryScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.primary,
+                contentColor = Color(0xFF1DB954),
                 indicator = { tabPositions ->
                     Box(
                         modifier = Modifier
@@ -268,7 +269,7 @@ fun LibraryScreen(
                             .height(3.dp)
                             .padding(horizontal = 16.dp)
                             .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                            .background(MaterialTheme.colorScheme.primary)
+                            .background(Color(0xFF1DB954))
                     )
                 }
             ) {
@@ -289,16 +290,16 @@ fun LibraryScreen(
                                 fontSize = 15.sp
                             ),
                             color = if (selectedTab == index)
-                                MaterialTheme.colorScheme.primary
+                                Color(0xFF1DB954)
                             else
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                Color(0xFFB3B3B3)
                         )
                     }
                 }
             }
 
             Divider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                color = Color(0xFF404040),
                 thickness = 0.5.dp,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
@@ -315,75 +316,47 @@ fun LibraryScreen(
                                 isScanning = isScanning
                             )
                         } else {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    tonalElevation = 1.dp
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(20.dp)
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                item {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Column {
-                                                Text(
-                                                    text = "Votre collection",
-                                                    style = MaterialTheme.typography.titleLarge.copy(
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 20.sp
-                                                    ),
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Spacer(modifier = Modifier.height(6.dp))
-                                                Text(
-                                                    text = "${tracks.size} titres • ${calculateTotalDuration(tracks)}",
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        fontSize = 14.sp
-                                                    ),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
+                                        Text(
+                                            text = "Toutes les chansons",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 22.sp
+                                            ),
+                                            color = Color.White
+                                        )
 
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(56.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        Brush.radialGradient(
-                                                            colors = listOf(
-                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                                                            )
-                                                        )
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    Icons.Rounded.MusicNote,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(28.dp)
-                                                )
-                                            }
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = Color(0xFF1E1E1E),
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "${tracks.size} titres",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                color = Color(0xFFB3B3B3),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                            )
                                         }
                                     }
                                 }
-
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    items(tracks) { track ->
-                                        TrackItem(track = track, navController = nav)
-                                    }
+                                items(tracks) { track ->
+                                    TrackItem(track = track, navController = nav)
                                 }
                             }
                         }
@@ -402,15 +375,38 @@ fun LibraryScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 item {
-                                    Text(
-                                        text = "${albums.size} albums",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 18.sp
-                                        ),
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(bottom = 8.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Albums",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 22.sp
+                                            ),
+                                            color = Color.White
+                                        )
+
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = Color(0xFF1E1E1E),
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "${albums.size} albums",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                color = Color(0xFFB3B3B3),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                    }
                                 }
                                 items(albums) { album ->
                                     AlbumItem(album = album)
@@ -432,15 +428,38 @@ fun LibraryScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 item {
-                                    Text(
-                                        text = "${artists.size} artistes",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 18.sp
-                                        ),
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(bottom = 8.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Artistes",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 22.sp
+                                            ),
+                                            color = Color.White
+                                        )
+
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = Color(0xFF1E1E1E),
+                                            modifier = Modifier.padding(vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "${artists.size} artistes",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Medium
+                                                ),
+                                                color = Color(0xFFB3B3B3),
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                            )
+                                        }
+                                    }
                                 }
                                 items(artists) { artist ->
                                     ArtistItem(artist = artist)
@@ -462,30 +481,29 @@ fun TrackItem(
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
-        shadowElevation = 0.5.dp,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF1E1E1E),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
         onClick = {
-            // Naviguer vers le lecteur avec l'ID de la piste
             navController.navigate("player/${track.id}")
         }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                                MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                                Color(0xFF1DB954).copy(alpha = 0.3f),
+                                Color(0xFF1DB954).copy(alpha = 0.1f)
                             )
                         )
                     ),
@@ -494,8 +512,8 @@ fun TrackItem(
                 Icon(
                     Icons.Rounded.MusicNote,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(26.dp)
+                    tint = Color(0xFF1DB954),
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
@@ -508,42 +526,40 @@ fun TrackItem(
                     text = track.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = track.artist,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = track.artist,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp
+                        ),
+                        color = Color(0xFFB3B3B3),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
 
-            Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.padding(end = 4.dp)
-            ) {
-                Text(
-                    text = formatDuration(track.duration),
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
+                    Text(
+                        text = formatDuration(track.duration),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF808080),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -552,12 +568,12 @@ fun TrackItem(
                 onClick = {
                     // Action du menu
                 },
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = Color(0xFF808080),
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -570,9 +586,9 @@ fun AlbumItem(album: com.example.mozika.domain.model.Album) {
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        tonalElevation = 1.dp,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF1E1E1E),
+        tonalElevation = 0.dp,
         onClick = {
             // Naviguer vers l'album
         }
@@ -580,25 +596,25 @@ fun AlbumItem(album: com.example.mozika.domain.model.Album) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(56.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Rounded.Album,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(30.dp)
+                    tint = Color(0xFF1DB954),
+                    modifier = Modifier.size(28.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -607,41 +623,46 @@ fun AlbumItem(album: com.example.mozika.domain.model.Album) {
                     text = album.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = album.artist,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    text = "${album.trackCount} pistes",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = album.artist,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp
+                        ),
+                        color = Color(0xFFB3B3B3),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "${album.trackCount} pistes",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF1DB954)
+                    )
+                }
             }
 
             Icon(
                 imageVector = Icons.Rounded.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint = Color(0xFF808080),
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -653,9 +674,9 @@ fun ArtistItem(artist: com.example.mozika.domain.model.Artist) {
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        tonalElevation = 1.dp,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF1E1E1E),
+        tonalElevation = 0.dp,
         onClick = {
             // Naviguer vers l'artiste
         }
@@ -663,27 +684,27 @@ fun ArtistItem(artist: com.example.mozika.domain.model.Artist) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = artist.name.take(1).uppercase(),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
+                        fontSize = 22.sp
                     ),
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color(0xFF1DB954)
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -692,28 +713,28 @@ fun ArtistItem(artist: com.example.mozika.domain.model.Artist) {
                     text = artist.name,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 16.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = "${artist.albumCount} albums • ${artist.trackCount} titres",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 13.sp
+                        fontSize = 14.sp
                     ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    color = Color(0xFFB3B3B3)
                 )
             }
 
             Icon(
                 imageVector = Icons.Rounded.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint = Color(0xFF808080),
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -728,6 +749,7 @@ fun EmptyLibraryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFF121212))
             .padding(40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -740,8 +762,8 @@ fun EmptyLibraryScreen(
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                            Color(0xFF1DB954).copy(alpha = 0.2f),
+                            Color(0xFF1E1E1E).copy(alpha = 0.8f)
                         )
                     )
                 ),
@@ -750,7 +772,7 @@ fun EmptyLibraryScreen(
             Icon(
                 Icons.Rounded.MusicNote,
                 contentDescription = "Music library",
-                tint = MaterialTheme.colorScheme.primary,
+                tint = Color(0xFF1DB954),
                 modifier = Modifier.size(56.dp)
             )
         }
@@ -765,7 +787,7 @@ fun EmptyLibraryScreen(
             ),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 10.dp),
-            color = MaterialTheme.colorScheme.onSurface
+            color = Color.White
         )
 
         Text(
@@ -774,28 +796,27 @@ fun EmptyLibraryScreen(
                 lineHeight = 22.sp,
                 fontSize = 15.sp
             ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color(0xFFB3B3B3),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 36.dp)
         )
 
-        FilledTonalButton(
+        Button(
             onClick = onScanClick,
             enabled = !isScanning,
             modifier = Modifier
                 .fillMaxWidth(0.75f)
-                .height(54.dp)
-                .shadow(4.dp, RoundedCornerShape(14.dp)),
+                .height(54.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1DB954)
             )
         ) {
             if (isScanning) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(22.dp),
                     strokeWidth = 2.5.dp,
-                    color = MaterialTheme.colorScheme.primary
+                    color = Color.White
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Text(
@@ -829,16 +850,4 @@ private fun formatDuration(milliseconds: Int): String {
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
     return String.format("%d:%02d", minutes, remainingSeconds)
-}
-
-private fun calculateTotalDuration(tracks: List<com.example.mozika.domain.model.Track>): String {
-    val totalSeconds = tracks.sumOf { it.duration } / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-
-    return if (hours > 0) {
-        "${hours}h ${minutes}min"
-    } else {
-        "${minutes}min"
-    }
 }
