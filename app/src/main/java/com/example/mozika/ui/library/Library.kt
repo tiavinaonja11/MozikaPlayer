@@ -409,7 +409,7 @@ fun LibraryScreen(
                                     }
                                 }
                                 items(albums) { album ->
-                                    AlbumItem(album = album)
+                                    AlbumItem(album = album, navController = nav)
                                 }
                             }
                         }
@@ -462,7 +462,7 @@ fun LibraryScreen(
                                     }
                                 }
                                 items(artists) { artist ->
-                                    ArtistItem(artist = artist)
+                                    ArtistItem(artist = artist, navController = nav)
                                 }
                             }
                         }
@@ -582,7 +582,10 @@ fun TrackItem(
 }
 
 @Composable
-fun AlbumItem(album: com.example.mozika.domain.model.Album) {
+fun AlbumItem(
+    album: com.example.mozika.domain.model.Album,
+    navController: androidx.navigation.NavHostController
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
@@ -590,7 +593,8 @@ fun AlbumItem(album: com.example.mozika.domain.model.Album) {
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         onClick = {
-            // Naviguer vers l'album
+            // Naviguer vers les détails de l'album
+            navController.navigate("album/${album.id}")
         }
     ) {
         Row(
@@ -670,7 +674,10 @@ fun AlbumItem(album: com.example.mozika.domain.model.Album) {
 }
 
 @Composable
-fun ArtistItem(artist: com.example.mozika.domain.model.Artist) {
+fun ArtistItem(
+    artist: com.example.mozika.domain.model.Artist,
+    navController: androidx.navigation.NavHostController
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
@@ -678,7 +685,8 @@ fun ArtistItem(artist: com.example.mozika.domain.model.Artist) {
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         onClick = {
-            // Naviguer vers l'artiste
+            // Naviguer vers les détails de l'artiste
+            navController.navigate("artist/${artist.id}")
         }
     ) {
         Row(

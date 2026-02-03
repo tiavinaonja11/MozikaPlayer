@@ -56,6 +56,9 @@ class PlayerVM @Inject constructor(
     var playlist by mutableStateOf<List<DomainTrack>>(emptyList())
         private set
 
+    var playlistContext by mutableStateOf<PlaylistContext>(PlaylistContext.None)
+        private set
+
     private var updateJob: Job? = null
     private var originalPlaylist: List<DomainTrack> = emptyList()
 
@@ -72,6 +75,7 @@ class PlayerVM @Inject constructor(
             trackRepo.tracks().collect { tracks ->
                 playlist = tracks
                 originalPlaylist = tracks
+                playlistContext = PlaylistContext.AllTracks
                 if (currentTrack == null && tracks.isNotEmpty()) {
                     load(tracks.first().id)
                 }
@@ -194,6 +198,102 @@ class PlayerVM @Inject constructor(
                 waveform = createFallbackWaveform()
             }
         }
+    }
+
+    fun loadAlbum(albumId: String) {
+        viewModelScope.launch {
+            try {
+                val albumTracks = getAlbumTracks(albumId)
+                if (albumTracks.isNotEmpty()) {
+                    playlist = albumTracks
+                    originalPlaylist = albumTracks
+                    playlistContext = PlaylistContext.Album(albumId)
+                    load(albumTracks.first().id)
+                } else {
+                    // Retour à la bibliothèque complète si album vide
+                    trackRepo.tracks().collect { tracks ->
+                        playlist = tracks
+                        originalPlaylist = tracks
+                        playlistContext = PlaylistContext.AllTracks
+                        if (tracks.isNotEmpty()) {
+                            load(tracks.first().id)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun loadArtist(artistId: String) {
+        viewModelScope.launch {
+            try {
+                val artistTracks = getArtistTracks(artistId)
+                if (artistTracks.isNotEmpty()) {
+                    playlist = artistTracks
+                    originalPlaylist = artistTracks
+                    playlistContext = PlaylistContext.Artist(artistId)
+                    load(artistTracks.first().id)
+                } else {
+                    trackRepo.tracks().collect { tracks ->
+                        playlist = tracks
+                        originalPlaylist = tracks
+                        playlistContext = PlaylistContext.AllTracks
+                        if (tracks.isNotEmpty()) {
+                            load(tracks.first().id)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun playAlbumFromTrack(trackId: Long) {
+        viewModelScope.launch {
+            val track = playlist.find { it.id == trackId }
+                ?: trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
+
+            track?.let { currentTrack ->
+                val albumTracks = getAlbumTracks(currentTrack.album)
+                if (albumTracks.isNotEmpty()) {
+                    playlist = albumTracks
+                    originalPlaylist = albumTracks
+                    playlistContext = PlaylistContext.Album(currentTrack.album)
+                    load(trackId)
+                }
+            }
+        }
+    }
+
+    private suspend fun getAlbumTracks(albumTitle: String): List<DomainTrack> {
+        return trackRepo.tracks().firstOrNull()?.filter { track ->
+            track.album.equals(albumTitle, ignoreCase = true)
+        } ?: emptyList()
+    }
+
+    private suspend fun getArtistTracks(artistName: String): List<DomainTrack> {
+        return trackRepo.tracks().firstOrNull()?.filter { track ->
+            track.artist.equals(artistName, ignoreCase = true)
+        } ?: emptyList()
+    }
+
+    fun getAlbumFromCurrentTrack(): String? {
+        return currentTrack?.album
+    }
+
+    fun getArtistFromCurrentTrack(): String? {
+        return currentTrack?.artist
+    }
+
+    fun isCurrentTrackInAlbum(): Boolean {
+        return playlistContext is PlaylistContext.Album
+    }
+
+    fun isCurrentTrackInArtist(): Boolean {
+        return playlistContext is PlaylistContext.Artist
     }
 
     private fun createFallbackWaveform(): IntArray {
@@ -324,6 +424,12 @@ class PlayerVM @Inject constructor(
         viewModelScope.launch {
             try {
                 trackRepo.refreshTracks()
+                // Recharger la playlist après le rafraîchissement
+                trackRepo.tracks().collect { tracks ->
+                    playlist = tracks
+                    originalPlaylist = tracks
+                    playlistContext = PlaylistContext.AllTracks
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -336,14 +442,40 @@ class PlayerVM @Inject constructor(
                 trackRepo.tracks().collect { tracks ->
                     playlist = tracks
                     originalPlaylist = tracks
+                    playlistContext = PlaylistContext.AllTracks
                 }
             } else {
                 trackRepo.searchTracks(query).collect { tracks ->
                     playlist = tracks
                     originalPlaylist = tracks
+                    playlistContext = PlaylistContext.Search(query)
                 }
             }
         }
+    }
+
+    fun clearSearch() {
+        viewModelScope.launch {
+            trackRepo.tracks().collect { tracks ->
+                playlist = tracks
+                originalPlaylist = tracks
+                playlistContext = PlaylistContext.AllTracks
+            }
+        }
+    }
+
+    fun getCurrentPlaylistInfo(): String {
+        return when (val context = playlistContext) {
+            is PlaylistContext.Album -> "Album: ${context.albumId}"
+            is PlaylistContext.Artist -> "Artiste: ${context.artistId}"
+            is PlaylistContext.Search -> "Recherche: ${context.query}"
+            is PlaylistContext.AllTracks -> "Toutes les pistes"
+            is PlaylistContext.None -> "Aucune playlist"
+        }
+    }
+
+    fun getCurrentPlaylistSize(): Int {
+        return playlist.size
     }
 
     override fun onCleared() {
@@ -355,5 +487,14 @@ class PlayerVM @Inject constructor(
 
     enum class RepeatMode {
         OFF, ALL, ONE
+    }
+
+    // Classes scellées pour représenter le contexte de la playlist
+    sealed class PlaylistContext {
+        object None : PlaylistContext()
+        object AllTracks : PlaylistContext()
+        data class Album(val albumId: String) : PlaylistContext()
+        data class Artist(val artistId: String) : PlaylistContext()
+        data class Search(val query: String) : PlaylistContext()
     }
 }
