@@ -23,7 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.launch
+import com.example.mozika.ui.nav.navigateToTrack
+import com.example.mozika.ui.player.PlayerVM
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +36,9 @@ fun ArtistDetailScreen(
     val artists by viewModel.artists.collectAsState()
     val albums by viewModel.albums.collectAsState()
     val tracks by viewModel.tracks.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
+
+    // Récupérer PlayerVM
+    val playerVM: PlayerVM = hiltViewModel()
 
     // Trouver l'artiste correspondant
     val artist = remember(artistId, artists) {
@@ -65,11 +68,13 @@ fun ArtistDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Artiste",
+                        text = artist?.name ?: "Artiste",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
-                        )
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
@@ -168,7 +173,7 @@ fun ArtistDetailScreen(
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
                                 Text(
-                                    text = "${artist.albumCount} albums",
+                                    text = "${artistAlbums.size} albums",
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
@@ -184,7 +189,7 @@ fun ArtistDetailScreen(
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
                                 Text(
-                                    text = "${artist.trackCount} titres",
+                                    text = "${artistTracks.size} titres",
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
@@ -197,13 +202,14 @@ fun ArtistDetailScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Bouton Play All
+                        // Bouton "Lire tout" - CORRIGÉ
                         Button(
                             onClick = {
-                                // Jouer toutes les chansons de l'artiste
                                 if (artistTracks.isNotEmpty()) {
-                                    // TODO: Implémenter la lecture de toute la playlist
-                                    navController.navigate("player/${artistTracks.first().id}")
+                                    // Charger toute la playlist de l'artiste
+                                    playerVM.loadArtist(artist.name)
+                                    // Naviguer vers la première piste
+                                    navController.navigateToTrack(artistTracks.first().id)
                                 }
                             },
                             modifier = Modifier
@@ -278,9 +284,14 @@ fun ArtistDetailScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Afficher les chansons (limité à 10 pour l'exemple)
+                // Afficher les chansons
                 items(artistTracks.take(10)) { track ->
-                    TrackItem(track = track, navController = navController)
+                    TrackItemArtist(
+                        track = track,
+                        navController = navController,
+                        artistName = artist.name,
+                        playerVM = playerVM
+                    )
                 }
 
                 if (artistTracks.size > 10) {
@@ -289,7 +300,6 @@ fun ArtistDetailScreen(
                         TextButton(
                             onClick = {
                                 // Afficher toutes les chansons
-                                // Vous pourriez créer un écran séparé pour toutes les chansons de l'artiste
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -303,4 +313,126 @@ fun ArtistDetailScreen(
             }
         }
     }
+}
+
+// Version spéciale pour les artistes
+@Composable
+fun TrackItemArtist(
+    track: com.example.mozika.domain.model.Track,
+    navController: NavHostController,
+    artistName: String,
+    playerVM: PlayerVM
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF1E1E1E),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        onClick = {
+            // Charger toute la playlist de l'artiste
+            playerVM.loadArtist(artistName)
+            // Puis charger cette piste spécifique
+            playerVM.load(track.id, autoPlay = true)
+            navController.navigate("player/${track.id}")
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF1DB954).copy(alpha = 0.3f),
+                                Color(0xFF1DB954).copy(alpha = 0.1f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.MusicNote,
+                    contentDescription = null,
+                    tint = Color(0xFF1DB954),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = track.artist,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp
+                        ),
+                        color = Color(0xFFB3B3B3),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = formatDuration(track.duration),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF808080),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = {
+                    // Action du menu
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "Menu",
+                    tint = Color(0xFF808080),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+private fun formatDuration(milliseconds: Int): String {
+    val seconds = milliseconds / 1000
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return String.format("%d:%02d", minutes, remainingSeconds)
 }

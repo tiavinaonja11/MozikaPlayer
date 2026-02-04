@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.launch
+import com.example.mozika.ui.nav.navigateToTrack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +34,8 @@ fun AlbumDetailScreen(
 ) {
     val albums by viewModel.albums.collectAsState()
     val tracks by viewModel.tracks.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
+    // Récupérer le PlayerVM ici, dans le contexte Composable
+    val playerVM: com.example.mozika.ui.player.PlayerVM = hiltViewModel()
 
     // Trouver l'album correspondant
     val album = remember(albumId, albums) {
@@ -55,11 +56,13 @@ fun AlbumDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Album",
+                        text = album?.title ?: "Album",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
-                        )
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 navigationIcon = {
@@ -167,7 +170,7 @@ fun AlbumDetailScreen(
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
                                 Text(
-                                    text = "${album.trackCount} pistes",
+                                    text = "${albumTracks.size} pistes",
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
@@ -196,13 +199,14 @@ fun AlbumDetailScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Bouton Play All
+                        // Bouton "Lire tout" - CORRIGÉ
                         Button(
                             onClick = {
-                                // Jouer toutes les chansons de l'album
                                 if (albumTracks.isNotEmpty()) {
-                                    // TODO: Implémenter la lecture de toute la playlist
-                                    navController.navigate("player/${albumTracks.first().id}")
+                                    // Charger toute la playlist de l'album
+                                    playerVM.loadAlbum(album.title)
+                                    // Naviguer vers la première piste
+                                    navController.navigateToTrack(albumTracks.first().id)
                                 }
                             },
                             modifier = Modifier
@@ -251,9 +255,138 @@ fun AlbumDetailScreen(
                 }
 
                 items(albumTracks) { track ->
-                    TrackItem(track = track, navController = navController)
+                    // Utiliser une version spéciale de TrackItem pour les albums
+                    TrackItemAlbum(
+                        track = track,
+                        navController = navController,
+                        albumTitle = album.title,
+                        playerVM = playerVM
+                    )
                 }
             }
         }
     }
+}
+
+// Version spéciale de TrackItem pour les albums
+@Composable
+fun TrackItemAlbum(
+    track: com.example.mozika.domain.model.Track,
+    navController: NavHostController,
+    albumTitle: String,
+    playerVM: com.example.mozika.ui.player.PlayerVM
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF1E1E1E),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        onClick = {
+            // Charger l'album complet d'abord
+            playerVM.loadAlbum(albumTitle)
+            // Puis charger cette piste spécifique
+            playerVM.load(track.id, autoPlay = true)
+            navController.navigate("player/${track.id}")
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF1DB954).copy(alpha = 0.3f),
+                                Color(0xFF1DB954).copy(alpha = 0.1f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.MusicNote,
+                    contentDescription = null,
+                    tint = Color(0xFF1DB954),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = track.artist,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp
+                        ),
+                        color = Color(0xFFB3B3B3),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = formatDuration(track.duration),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF808080),
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = {
+                    // Action du menu
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "Menu",
+                    tint = Color(0xFF808080),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+// Fonction pour formater la durée
+private fun formatDuration(milliseconds: Int): String {
+    val seconds = milliseconds / 1000
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return String.format("%d:%02d", minutes, remainingSeconds)
 }

@@ -13,6 +13,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.example.mozika.data.datastore.PlayerPreferences
+import com.example.mozika.data.datastore.PlayerState
 import com.example.mozika.ui.player.AudioWaveformAnalyzer
 import com.example.mozika.data.repo.TrackRepo
 import com.example.mozika.domain.model.Track as DomainTrack
@@ -20,6 +22,8 @@ import com.example.mozika.domain.usecase.GenWaveform
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,7 +33,8 @@ import javax.inject.Inject
 class PlayerVM @Inject constructor(
     private val exoPlayer: ExoPlayer,
     private val genWaveform: GenWaveform,
-    private val trackRepo: TrackRepo
+    private val trackRepo: TrackRepo,
+    private val playerPreferences: PlayerPreferences
 ) : ViewModel() {
 
     var position by mutableLongStateOf(0L)
@@ -39,13 +44,11 @@ class PlayerVM @Inject constructor(
         private set
 
     var isPlaying by mutableStateOf(false)
-        private set
 
     var waveform by mutableStateOf(intArrayOf())
         private set
 
     var currentTrack by mutableStateOf<DomainTrack?>(null)
-        private set
 
     var shuffleMode by mutableStateOf(false)
         private set
@@ -54,7 +57,7 @@ class PlayerVM @Inject constructor(
         private set
 
     var playlist by mutableStateOf<List<DomainTrack>>(emptyList())
-        private set
+   
 
     var playlistContext by mutableStateOf<PlaylistContext>(PlaylistContext.None)
         private set
@@ -67,7 +70,99 @@ class PlayerVM @Inject constructor(
     init {
         setupPlayerListeners()
         startPlayerUpdates()
-        loadAllTracks()
+        restorePlayerState()
+        startAutoSave()
+    }
+
+    private fun restorePlayerState() {
+        viewModelScope.launch {
+            // Récupérer l'état sauvegardé
+            val savedState = playerPreferences.playerState.firstOrNull()
+                ?: PlayerState.empty()
+
+            if (savedState.trackId > 0) {
+                try {
+                    // Chercher la piste sauvegardée
+                    val track = trackRepo.tracks().firstOrNull()?.find {
+                        it.id == savedState.trackId
+                    }
+
+                    if (track != null) {
+                        // Restaurer la piste mais en pause
+                        currentTrack = track
+
+                        // Préparer le player
+                        val mediaItem = MediaItem.fromUri(track.data)
+                        exoPlayer.setMediaItem(mediaItem)
+                        exoPlayer.prepare()
+
+                        // Restaurer la position
+                        if (savedState.position > 0) {
+                            exoPlayer.seekTo(savedState.position)
+                        }
+
+                        // Restaurer l'état de lecture
+                        isPlaying = savedState.isPlaying
+                        if (savedState.isPlaying) {
+                            exoPlayer.play()
+                        }
+
+                        // Restaurer le contexte de playlist
+                        playlistContext = when (savedState.playlistContext) {
+                            "album" -> PlaylistContext.Album(savedState.contextId)
+                            "artist" -> PlaylistContext.Artist(savedState.contextId)
+                            "search" -> PlaylistContext.Search(savedState.contextId)
+                            "all" -> PlaylistContext.AllTracks
+                            else -> PlaylistContext.None
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // Charger toutes les pistes pour la bibliothèque
+            loadAllTracks()
+        }
+    }
+
+    private fun savePlayerState() {
+        viewModelScope.launch {
+            currentTrack?.let { track ->
+                val context = playlistContext
+                val (contextType, contextId) = when (context) {
+                    is PlaylistContext.Album -> Pair("album", context.albumId)
+                    is PlaylistContext.Artist -> Pair("artist", context.artistId)
+                    is PlaylistContext.Search -> Pair("search", context.query)
+                    is PlaylistContext.AllTracks -> Pair("all", "")
+                    is PlaylistContext.None -> Pair("none", "")
+                }
+
+                playerPreferences.savePlayerState(
+                    trackId = track.id,
+                    isPlaying = isPlaying,
+                    position = exoPlayer.currentPosition,
+                    playlistContext = contextType,
+                    contextId = contextId
+                )
+            }
+        }
+    }
+
+    fun isPlaylistValidForContext(): Boolean {
+        return when (playlistContext) {
+            is PlaylistContext.Album, is PlaylistContext.Artist -> playlist.size > 1
+            else -> playlist.size > 1
+        }
+    }
+
+    private fun startAutoSave() {
+        viewModelScope.launch {
+            while (true) {
+                delay(5000)
+                savePlayerState()
+            }
+        }
     }
 
     private fun loadAllTracks() {
@@ -75,9 +170,10 @@ class PlayerVM @Inject constructor(
             trackRepo.tracks().collect { tracks ->
                 playlist = tracks
                 originalPlaylist = tracks
-                playlistContext = PlaylistContext.AllTracks
-                if (currentTrack == null && tracks.isNotEmpty()) {
-                    load(tracks.first().id)
+
+                // Si aucun contexte n'est défini, utiliser AllTracks
+                if (playlistContext == PlaylistContext.None) {
+                    playlistContext = PlaylistContext.AllTracks
                 }
             }
         }
@@ -85,7 +181,6 @@ class PlayerVM @Inject constructor(
 
     private fun setupPlayerListeners() {
         exoPlayer.addListener(object : Player.Listener {
-
             override fun onPlaybackStateChanged(playbackState: Int) {
                 when (playbackState) {
                     Player.STATE_ENDED -> {
@@ -98,13 +193,13 @@ class PlayerVM @Inject constructor(
                         }
                     }
                     Player.STATE_READY -> {
-                        // tu peux gérer READY si tu veux (buffer fini)
+                        // État prêt
                     }
                     Player.STATE_BUFFERING -> {
-                        // buffering (afficher un loader si besoin)
+                        // Buffering
                     }
                     Player.STATE_IDLE -> {
-                        // player à l'arrêt sans média
+                        // Idle
                     }
                 }
             }
@@ -143,10 +238,20 @@ class PlayerVM @Inject constructor(
         if (sessionId == C.AUDIO_SESSION_ID_UNSET) return
 
         if (analyzer == null) {
-            analyzer = AudioWaveformAnalyzer(sessionId)
+            try {
+                analyzer = AudioWaveformAnalyzer(sessionId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return
+            }
         }
-        analyzer?.start { amps ->
-            waveform = downSampleAndSmooth(amps)
+
+        try {
+            analyzer?.start { amps ->
+                waveform = downSampleAndSmooth(amps)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -171,21 +276,33 @@ class PlayerVM @Inject constructor(
         return out
     }
 
-    fun load(trackId: Long) {
+    // Fonction principale pour charger une piste
+    fun load(trackId: Long, autoPlay: Boolean = true) {
         viewModelScope.launch {
             try {
-                val track = playlist.find { it.id == trackId }
-                    ?: trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
-                    ?: throw Exception("Track not found")
+                // Chercher la piste dans la playlist actuelle d'abord
+                var track = playlist.find { it.id == trackId }
+
+                // Si pas trouvée, chercher dans le repo
+                if (track == null) {
+                    track = trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
+                }
+
+                if (track == null) {
+                    throw Exception("Piste non trouvée")
+                }
 
                 currentTrack = track
 
                 val mediaItem = MediaItem.fromUri(track.data)
                 exoPlayer.setMediaItem(mediaItem)
                 exoPlayer.prepare()
-                exoPlayer.play()
 
-                // valeur initiale (fallback si Visualizer ne marche pas)
+                if (autoPlay) {
+                    exoPlayer.play()
+                }
+
+                // Générer waveform
                 waveform = try {
                     genWaveform(trackId)
                 } catch (e: Exception) {
@@ -200,25 +317,19 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    fun loadAlbum(albumId: String) {
+    fun loadAlbum(albumTitle: String) {
         viewModelScope.launch {
             try {
-                val albumTracks = getAlbumTracks(albumId)
+                val albumTracks = getAlbumTracks(albumTitle)
                 if (albumTracks.isNotEmpty()) {
+                    // Mettre à jour la playlist avec les pistes de l'album
                     playlist = albumTracks
                     originalPlaylist = albumTracks
-                    playlistContext = PlaylistContext.Album(albumId)
-                    load(albumTracks.first().id)
-                } else {
-                    // Retour à la bibliothèque complète si album vide
-                    trackRepo.tracks().collect { tracks ->
-                        playlist = tracks
-                        originalPlaylist = tracks
-                        playlistContext = PlaylistContext.AllTracks
-                        if (tracks.isNotEmpty()) {
-                            load(tracks.first().id)
-                        }
-                    }
+                    playlistContext = PlaylistContext.Album(albumTitle)
+
+                    // DEBUG
+                    println("Album chargé: $albumTitle, ${albumTracks.size} pistes")
+                    println("Contexte: ${playlistContext}")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -226,24 +337,19 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    fun loadArtist(artistId: String) {
+    fun loadArtist(artistName: String) {
         viewModelScope.launch {
             try {
-                val artistTracks = getArtistTracks(artistId)
+                val artistTracks = getArtistTracks(artistName)
                 if (artistTracks.isNotEmpty()) {
+                    // Mettre à jour la playlist avec les pistes de l'artiste
                     playlist = artistTracks
                     originalPlaylist = artistTracks
-                    playlistContext = PlaylistContext.Artist(artistId)
-                    load(artistTracks.first().id)
-                } else {
-                    trackRepo.tracks().collect { tracks ->
-                        playlist = tracks
-                        originalPlaylist = tracks
-                        playlistContext = PlaylistContext.AllTracks
-                        if (tracks.isNotEmpty()) {
-                            load(tracks.first().id)
-                        }
-                    }
+                    playlistContext = PlaylistContext.Artist(artistName)
+
+                    // DEBUG
+                    println("Artiste chargé: $artistName, ${artistTracks.size} pistes")
+                    println("Contexte: ${playlistContext}")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -251,6 +357,7 @@ class PlayerVM @Inject constructor(
         }
     }
 
+    // Fonction pour charger un album à partir d'une piste
     fun playAlbumFromTrack(trackId: Long) {
         viewModelScope.launch {
             val track = playlist.find { it.id == trackId }
@@ -268,18 +375,21 @@ class PlayerVM @Inject constructor(
         }
     }
 
+    // Récupérer les pistes d'un album
     private suspend fun getAlbumTracks(albumTitle: String): List<DomainTrack> {
         return trackRepo.tracks().firstOrNull()?.filter { track ->
             track.album.equals(albumTitle, ignoreCase = true)
         } ?: emptyList()
     }
 
+    // Récupérer les pistes d'un artiste
     private suspend fun getArtistTracks(artistName: String): List<DomainTrack> {
         return trackRepo.tracks().firstOrNull()?.filter { track ->
             track.artist.equals(artistName, ignoreCase = true)
         } ?: emptyList()
     }
 
+    // Méthodes utilitaires
     fun getAlbumFromCurrentTrack(): String? {
         return currentTrack?.album
     }
@@ -296,38 +406,27 @@ class PlayerVM @Inject constructor(
         return playlistContext is PlaylistContext.Artist
     }
 
-    private fun createFallbackWaveform(): IntArray {
-        val barCount = 200
-        return IntArray(barCount) { index ->
-            val position = index % 40
-            when {
-                position < 10 -> (position + 1) * 10
-                position < 20 -> (20 - position) * 10
-                position < 30 -> (position - 20) * 10
-                else -> (40 - position) * 10
-            }
-        }
+    // Méthode pour forcer la mise à jour de la piste actuelle
+    fun updateCurrentTrack(track: DomainTrack) {
+        currentTrack = track
     }
 
-    private fun createFallbackTrack(trackId: Long): DomainTrack {
-        return DomainTrack(
-            id = trackId,
-            title = "Lecture on Covid",
-            artist = "Crosstalk",
-            album = "Unknown Album",
-            duration = 180000,
-            dateAdded = System.currentTimeMillis(),
-            data = ""
-        )
-    }
+    // Flux pour observer les changements
+    fun getCurrentTrackFlow() = MutableStateFlow(currentTrack).apply {
+        value = currentTrack
+    }.asStateFlow()
 
+    fun getIsPlayingFlow() = MutableStateFlow(isPlaying).apply {
+        value = isPlaying
+    }.asStateFlow()
+
+    // Contrôles de lecture
     fun nextTrack() {
         if (playlist.isEmpty()) return
         currentTrack?.let { current ->
             val currentIndex = playlist.indexOfFirst { it.id == current.id }
             if (currentIndex != -1) {
-                val nextIndex =
-                    if (currentIndex < playlist.size - 1) currentIndex + 1 else 0
+                val nextIndex = if (currentIndex < playlist.size - 1) currentIndex + 1 else 0
                 load(playlist[nextIndex].id)
             } else {
                 load(playlist[0].id)
@@ -342,8 +441,7 @@ class PlayerVM @Inject constructor(
         currentTrack?.let { current ->
             val currentIndex = playlist.indexOfFirst { it.id == current.id }
             if (currentIndex != -1) {
-                val prevIndex =
-                    if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
+                val prevIndex = if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
                 load(playlist[prevIndex].id)
             }
         }
@@ -396,6 +494,7 @@ class PlayerVM @Inject constructor(
         exoPlayer.seekTo(ms)
     }
 
+    // Méthodes pour partager et favoris
     fun shareTrack() {
         viewModelScope.launch {
             currentTrack?.let { track ->
@@ -420,11 +519,11 @@ class PlayerVM @Inject constructor(
         }
     }
 
+    // Rafraîchir la bibliothèque
     fun refreshLibrary() {
         viewModelScope.launch {
             try {
                 trackRepo.refreshTracks()
-                // Recharger la playlist après le rafraîchissement
                 trackRepo.tracks().collect { tracks ->
                     playlist = tracks
                     originalPlaylist = tracks
@@ -436,6 +535,7 @@ class PlayerVM @Inject constructor(
         }
     }
 
+    // Recherche
     fun searchTracks(query: String) {
         viewModelScope.launch {
             if (query.isBlank()) {
@@ -464,6 +564,7 @@ class PlayerVM @Inject constructor(
         }
     }
 
+    // Informations sur la playlist
     fun getCurrentPlaylistInfo(): String {
         return when (val context = playlistContext) {
             is PlaylistContext.Album -> "Album: ${context.albumId}"
@@ -478,18 +579,53 @@ class PlayerVM @Inject constructor(
         return playlist.size
     }
 
+    // Sauvegarde et nettoyage
     override fun onCleared() {
         super.onCleared()
+        savePlayerState()
         updateJob?.cancel()
         analyzer?.stop()
-        exoPlayer.release()
     }
 
+    fun forceSaveState() {
+        viewModelScope.launch {
+            savePlayerState()
+        }
+    }
+
+    // Waveform par défaut
+    private fun createFallbackWaveform(): IntArray {
+        val barCount = 200
+        return IntArray(barCount) { index ->
+            val position = index % 40
+            when {
+                position < 10 -> (position + 1) * 10
+                position < 20 -> (20 - position) * 10
+                position < 30 -> (position - 20) * 10
+                else -> (40 - position) * 10
+            }
+        }
+    }
+
+    // Piste par défaut
+    private fun createFallbackTrack(trackId: Long): DomainTrack {
+        return DomainTrack(
+            id = trackId,
+            title = "Lecture en cours",
+            artist = "Artiste inconnu",
+            album = "Album inconnu",
+            duration = 180000,
+            dateAdded = System.currentTimeMillis(),
+            data = ""
+        )
+    }
+
+    // Enum pour le mode répétition
     enum class RepeatMode {
         OFF, ALL, ONE
     }
 
-    // Classes scellées pour représenter le contexte de la playlist
+    // Contextes de playlist
     sealed class PlaylistContext {
         object None : PlaylistContext()
         object AllTracks : PlaylistContext()

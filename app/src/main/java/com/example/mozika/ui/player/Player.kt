@@ -78,7 +78,10 @@ fun PlayerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = { navController.popBackStack() },
+                    onClick = {
+                        // Retourner en arrière SANS arrêter la musique
+                        navController.popBackStack()
+                    },
                     modifier = Modifier
                         .size(36.dp)
                         .background(Color(0x20FFFFFF), CircleShape)

@@ -107,3 +107,4 @@ fun NavHostController.navigateToTrack(trackId: Long) {
         launchSingleTop = true
     }
 }
+

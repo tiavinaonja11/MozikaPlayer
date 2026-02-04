@@ -30,19 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.mozika.ui.player.PlayerVM
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-// Modèle pour les items de la bottom navigation
-sealed class BottomNavItem(
-    val route: String,
-    val title: String,
-    val icon: ImageVector
-) {
-    object Home : BottomNavItem("home", "Accueil", Icons.Default.Home)
-    object Playlists : BottomNavItem("playlists", "Playlists", Icons.Default.PlaylistPlay)
-    object Profile : BottomNavItem("profile", "Profil", Icons.Default.Person)
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +47,7 @@ fun LibraryScreen(
     val scanResult by viewModel.scanResult.collectAsState()
     val query by viewModel.query.collectAsState()
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val tabTitles = listOf("Chansons", "Albums", "Artistes")
 
     val pagerState = rememberPagerState(pageCount = { 3 })
@@ -76,20 +66,13 @@ fun LibraryScreen(
         }
     }
 
-    var selectedBottomNavItem by remember { mutableStateOf(0) }
-    val bottomNavItems = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Playlists,
-        BottomNavItem.Profile
-    )
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         if (!isSearchVisible) {
                             Text(
@@ -106,7 +89,7 @@ fun LibraryScreen(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth(0.92f)
-                                    .height(48.dp),
+                                    .height(42.dp), // Réduit de 48 à 42
                                 shape = RoundedCornerShape(24.dp),
                                 color = Color(0x20FFFFFF),
                                 tonalElevation = 1.dp
@@ -114,19 +97,20 @@ fun LibraryScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 16.dp),
+                                        .padding(horizontal = 14.dp), // Réduit de 16 à 14
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         Icons.Rounded.Search,
                                         contentDescription = "Rechercher",
                                         tint = Color(0xFFB3B3B3),
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(18.dp) // Réduit de 20 à 18
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(10.dp)) // Réduit de 12 à 10
                                     Text(
                                         text = if (query.isEmpty()) "Rechercher chansons, albums..." else query,
                                         style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 14.sp, // Réduit
                                             color = if (query.isEmpty()) Color(0xFF808080)
                                             else Color.White,
                                             fontWeight = if (query.isEmpty()) FontWeight.Normal else FontWeight.Medium
@@ -148,70 +132,18 @@ fun LibraryScreen(
                     IconButton(
                         onClick = { isSearchVisible = !isSearchVisible },
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(44.dp)
+                            .padding(end = 4.dp) // Réduit de 8 à 4
+                            .size(40.dp) // Réduit de 44 à 40
                     ) {
                         Icon(
                             imageVector = if (isSearchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
                             contentDescription = if (isSearchVisible) "Fermer la recherche" else "Rechercher",
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp) // Réduit de 24 à 22
                         )
                     }
                 }
             )
-        },
-        bottomBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp,
-                tonalElevation = 3.dp,
-                color = Color(0xFF1E1E1E)
-            ) {
-                NavigationBar(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(70.dp),
-                    containerColor = Color.Transparent,
-                    contentColor = Color.White
-                ) {
-                    bottomNavItems.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            icon = {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.title,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 12.sp,
-                                        fontWeight = if (selectedBottomNavItem == index) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                )
-                            },
-                            selected = selectedBottomNavItem == index,
-                            onClick = {
-                                selectedBottomNavItem = index
-                                nav.navigate(item.route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color(0xFF1DB954),
-                                selectedTextColor = Color(0xFF1DB954),
-                                unselectedIconColor = Color(0xFFB3B3B3),
-                                unselectedTextColor = Color(0xFFB3B3B3),
-                                indicatorColor = Color(0xFF1DB954).copy(alpha = 0.2f)
-                            )
-                        )
-                    }
-                }
-            }
         },
         containerColor = Color(0xFF121212)
     ) { paddingValues ->
@@ -225,29 +157,29 @@ fun LibraryScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .shadow(2.dp, RoundedCornerShape(12.dp)),
-                    shape = RoundedCornerShape(12.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp), // Réduit vertical de 8 à 6
+                    shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
                     color = Color(0xFF1DB954).copy(alpha = 0.2f),
                     tonalElevation = 2.dp
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 14.dp, vertical = 10.dp), // Réduit de 12 à 10
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Check,
                             contentDescription = null,
                             tint = Color(0xFF1DB954),
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp) // Réduit de 20 à 18
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(10.dp)) // Réduit de 12 à 10
                         Text(
                             text = result,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 14.sp // Réduit
                             ),
                             color = Color.White
                         )
@@ -259,16 +191,16 @@ fun LibraryScreen(
                 selectedTabIndex = selectedTab,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp), // Réduit vertical de 8 à 6
                 containerColor = Color.Transparent,
                 contentColor = Color(0xFF1DB954),
                 indicator = { tabPositions ->
                     Box(
                         modifier = Modifier
                             .tabIndicatorOffset(tabPositions[selectedTab])
-                            .height(3.dp)
+                            .height(2.5.dp) // Réduit de 3 à 2.5
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)) // Réduit de 3 à 2
                             .background(Color(0xFF1DB954))
                     )
                 }
@@ -281,13 +213,13 @@ fun LibraryScreen(
                                 pagerState.animateScrollToPage(index)
                             }
                         },
-                        modifier = Modifier.height(48.dp)
+                        modifier = Modifier.height(44.dp) // Réduit de 48 à 44
                     ) {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 15.sp
+                                fontSize = 14.sp // Réduit de 15 à 14
                             ),
                             color = if (selectedTab == index)
                                 Color(0xFF1DB954)
@@ -318,14 +250,14 @@ fun LibraryScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), // Réduit de 12 à 10
+                                verticalArrangement = Arrangement.spacedBy(6.dp) // Réduit de 8 à 6
                             ) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 12.dp),
+                                            .padding(bottom = 10.dp), // Réduit de 12 à 10
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -333,24 +265,24 @@ fun LibraryScreen(
                                             text = "Toutes les chansons",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 22.sp
+                                                fontSize = 20.sp // Réduit de 22 à 20
                                             ),
                                             color = Color.White
                                         )
 
                                         Surface(
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
                                             color = Color(0xFF1E1E1E),
-                                            modifier = Modifier.padding(vertical = 4.dp)
+                                            modifier = Modifier.padding(vertical = 3.dp) // Réduit de 4 à 3
                                         ) {
                                             Text(
                                                 text = "${tracks.size} titres",
                                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontSize = 13.sp,
+                                                    fontSize = 12.sp, // Réduit de 13 à 12
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 color = Color(0xFFB3B3B3),
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp) // Réduit
                                             )
                                         }
                                     }
@@ -371,14 +303,14 @@ fun LibraryScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), // Réduit de 12 à 10
+                                verticalArrangement = Arrangement.spacedBy(6.dp) // Réduit de 8 à 6
                             ) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 12.dp),
+                                            .padding(bottom = 10.dp), // Réduit de 12 à 10
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -386,24 +318,24 @@ fun LibraryScreen(
                                             text = "Albums",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 22.sp
+                                                fontSize = 20.sp // Réduit de 22 à 20
                                             ),
                                             color = Color.White
                                         )
 
                                         Surface(
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
                                             color = Color(0xFF1E1E1E),
-                                            modifier = Modifier.padding(vertical = 4.dp)
+                                            modifier = Modifier.padding(vertical = 3.dp) // Réduit de 4 à 3
                                         ) {
                                             Text(
                                                 text = "${albums.size} albums",
                                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontSize = 13.sp,
+                                                    fontSize = 12.sp, // Réduit de 13 à 12
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 color = Color(0xFFB3B3B3),
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp) // Réduit
                                             )
                                         }
                                     }
@@ -424,14 +356,14 @@ fun LibraryScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), // Réduit de 12 à 10
+                                verticalArrangement = Arrangement.spacedBy(6.dp) // Réduit de 8 à 6
                             ) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 12.dp),
+                                            .padding(bottom = 10.dp), // Réduit de 12 à 10
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -439,24 +371,24 @@ fun LibraryScreen(
                                             text = "Artistes",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 22.sp
+                                                fontSize = 20.sp // Réduit de 22 à 20
                                             ),
                                             color = Color.White
                                         )
 
                                         Surface(
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
                                             color = Color(0xFF1E1E1E),
-                                            modifier = Modifier.padding(vertical = 4.dp)
+                                            modifier = Modifier.padding(vertical = 3.dp) // Réduit de 4 à 3
                                         ) {
                                             Text(
                                                 text = "${artists.size} artistes",
                                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontSize = 13.sp,
+                                                    fontSize = 12.sp, // Réduit de 13 à 12
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 color = Color(0xFFB3B3B3),
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp) // Réduit
                                             )
                                         }
                                     }
@@ -478,46 +410,53 @@ fun TrackItem(
     track: com.example.mozika.domain.model.Track,
     navController: androidx.navigation.NavHostController
 ) {
+    val playerVM: PlayerVM = hiltViewModel()
+
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         onClick = {
+            playerVM.load(track.id, autoPlay = true)
             navController.navigate("player/${track.id}")
         }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp), // Réduit de 16/12 à 14/10
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color(0xFF1DB954).copy(alpha = 0.3f),
-                                Color(0xFF1DB954).copy(alpha = 0.1f)
-                            )
-                        )
-                    ),
+                    .size(44.dp) // Réduit de 48 à 44
+                    .clip(RoundedCornerShape(8.dp)), // Réduit de 10 à 8
                 contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF1DB954).copy(alpha = 0.3f),
+                                    Color(0xFF1DB954).copy(alpha = 0.1f)
+                                )
+                            )
+                        )
+                )
                 Icon(
                     Icons.Rounded.MusicNote,
                     contentDescription = null,
                     tint = Color(0xFF1DB954),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp) // Réduit de 24 à 22
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp)) // Réduit de 14 à 12
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -526,14 +465,14 @@ fun TrackItem(
                     text = track.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
+                        fontSize = 15.sp // Réduit de 16 à 15
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp)) // Réduit de 4 à 3
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -541,7 +480,7 @@ fun TrackItem(
                     Text(
                         text = track.artist,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp
+                            fontSize = 13.sp // Réduit de 14 à 13
                         ),
                         color = Color(0xFFB3B3B3),
                         maxLines = 1,
@@ -549,12 +488,12 @@ fun TrackItem(
                         modifier = Modifier.weight(1f)
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp)) // Réduit de 8 à 6
 
                     Text(
                         text = formatDuration(track.duration),
                         style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 12.sp,
+                            fontSize = 11.sp, // Réduit de 12 à 11
                             fontWeight = FontWeight.Medium
                         ),
                         color = Color(0xFF808080),
@@ -562,19 +501,17 @@ fun TrackItem(
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp)) // Réduit de 8 à 6
 
             IconButton(
-                onClick = {
-                    // Action du menu
-                },
-                modifier = Modifier.size(36.dp)
+                onClick = { /* Action simple du menu */ },
+                modifier = Modifier.size(34.dp) // Réduit de 36 à 34
             ) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "Menu",
                     tint = Color(0xFF808080),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp) // Réduit de 20 à 18
                 )
             }
         }
@@ -589,36 +526,39 @@ fun AlbumItem(
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         onClick = {
-            // Naviguer vers les détails de l'album
             navController.navigate("album/${album.id}")
         }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp), // Réduit de 16 à 14
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
+                    .size(52.dp) // Réduit de 56 à 52
+                    .clip(RoundedCornerShape(8.dp)), // Réduit de 10 à 8
                 contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1DB954).copy(alpha = 0.2f))
+                )
                 Icon(
                     Icons.Rounded.Album,
                     contentDescription = null,
                     tint = Color(0xFF1DB954),
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(26.dp) // Réduit de 28 à 26
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp)) // Réduit de 16 à 14
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -627,14 +567,14 @@ fun AlbumItem(
                     text = album.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 15.sp // Réduit de 16 à 15
                     ),
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(5.dp)) // Réduit de 6 à 5
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -642,7 +582,7 @@ fun AlbumItem(
                     Text(
                         text = album.artist,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp
+                            fontSize = 13.sp // Réduit de 14 à 13
                         ),
                         color = Color(0xFFB3B3B3),
                         maxLines = 1,
@@ -650,12 +590,12 @@ fun AlbumItem(
                         modifier = Modifier.weight(1f)
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp)) // Réduit de 8 à 6
 
                     Text(
                         text = "${album.trackCount} pistes",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 12.sp,
+                            fontSize = 11.sp, // Réduit de 12 à 11
                             fontWeight = FontWeight.Medium
                         ),
                         color = Color(0xFF1DB954)
@@ -667,7 +607,7 @@ fun AlbumItem(
                 imageVector = Icons.Rounded.ChevronRight,
                 contentDescription = null,
                 tint = Color(0xFF808080),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp) // Réduit de 20 à 18
             )
         }
     }
@@ -681,38 +621,41 @@ fun ArtistItem(
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         onClick = {
-            // Naviguer vers les détails de l'artiste
             navController.navigate("artist/${artist.id}")
         }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp), // Réduit de 16 à 14
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
+                    .size(52.dp) // Réduit de 56 à 52
+                    .clip(CircleShape),
                 contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1DB954).copy(alpha = 0.2f))
+                )
                 Text(
                     text = artist.name.take(1).uppercase(),
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
+                        fontSize = 20.sp // Réduit de 22 à 20
                     ),
                     color = Color(0xFF1DB954)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp)) // Réduit de 16 à 14
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -721,19 +664,19 @@ fun ArtistItem(
                     text = artist.name,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 15.sp // Réduit de 16 à 15
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(5.dp)) // Réduit de 6 à 5
 
                 Text(
                     text = "${artist.albumCount} albums • ${artist.trackCount} titres",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp
+                        fontSize = 13.sp // Réduit de 14 à 13
                     ),
                     color = Color(0xFFB3B3B3)
                 )
@@ -743,7 +686,7 @@ fun ArtistItem(
                 imageVector = Icons.Rounded.ChevronRight,
                 contentDescription = null,
                 tint = Color(0xFF808080),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp) // Réduit de 20 à 18
             )
         }
     }
@@ -758,14 +701,14 @@ fun EmptyLibraryScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
-            .padding(40.dp),
+            .padding(32.dp), // Réduit de 40 à 32
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .shadow(8.dp, CircleShape)
+                .size(100.dp) // Réduit de 120 à 100
+                .shadow(6.dp, CircleShape) // Réduit de 8 à 6
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
@@ -781,32 +724,32 @@ fun EmptyLibraryScreen(
                 Icons.Rounded.MusicNote,
                 contentDescription = "Music library",
                 tint = Color(0xFF1DB954),
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(48.dp) // Réduit de 56 à 48
             )
         }
 
-        Spacer(modifier = Modifier.height(36.dp))
+        Spacer(modifier = Modifier.height(28.dp)) // Réduit de 36 à 28
 
         Text(
             text = "Bibliothèque vide",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 26.sp
+                fontSize = 22.sp // Réduit de 26 à 22
             ),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 10.dp),
+            modifier = Modifier.padding(bottom = 8.dp), // Réduit de 10 à 8
             color = Color.White
         )
 
         Text(
             text = "Commencez par scanner votre musique",
             style = MaterialTheme.typography.bodyMedium.copy(
-                lineHeight = 22.sp,
-                fontSize = 15.sp
+                lineHeight = 20.sp, // Réduit de 22 à 20
+                fontSize = 14.sp // Réduit de 15 à 14
             ),
             color = Color(0xFFB3B3B3),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 36.dp)
+            modifier = Modifier.padding(bottom = 28.dp) // Réduit de 36 à 28
         )
 
         Button(
@@ -814,23 +757,23 @@ fun EmptyLibraryScreen(
             enabled = !isScanning,
             modifier = Modifier
                 .fillMaxWidth(0.75f)
-                .height(54.dp),
-            shape = RoundedCornerShape(14.dp),
+                .height(48.dp), // Réduit de 54 à 48
+            shape = RoundedCornerShape(12.dp), // Réduit de 14 à 12
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF1DB954)
             )
         ) {
             if (isScanning) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(20.dp), // Réduit de 22 à 20
                     strokeWidth = 2.5.dp,
                     color = Color.White
                 )
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp)) // Réduit de 14 à 12
                 Text(
                     "Scan en cours...",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 15.sp,
+                        fontSize = 14.sp, // Réduit de 15 à 14
                         fontWeight = FontWeight.SemiBold
                     )
                 )
@@ -838,13 +781,13 @@ fun EmptyLibraryScreen(
                 Icon(
                     imageVector = Icons.Rounded.Refresh,
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp) // Réduit de 24 à 22
                 )
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp)) // Réduit de 14 à 12
                 Text(
                     "Scanner ma musique",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 15.sp,
+                        fontSize = 14.sp, // Réduit de 15 à 14
                         fontWeight = FontWeight.SemiBold
                     )
                 )
