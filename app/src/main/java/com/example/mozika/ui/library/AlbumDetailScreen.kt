@@ -34,10 +34,8 @@ fun AlbumDetailScreen(
 ) {
     val albums by viewModel.albums.collectAsState()
     val tracks by viewModel.tracks.collectAsState()
-    // Récupérer le PlayerVM ici, dans le contexte Composable
     val playerVM: com.example.mozika.ui.player.PlayerVM = hiltViewModel()
 
-    // Trouver l'album correspondant
     val album = remember(albumId, albums) {
         albums.find { it.id == albumId }
     }
@@ -199,7 +197,6 @@ fun AlbumDetailScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Bouton "Lire tout" - CORRIGÉ
                         Button(
                             onClick = {
                                 if (albumTracks.isNotEmpty()) {
@@ -284,9 +281,7 @@ fun TrackItemAlbum(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         onClick = {
-            // Charger l'album complet d'abord
             playerVM.loadAlbum(albumTitle)
-            // Puis charger cette piste spécifique
             playerVM.load(track.id, autoPlay = true)
             navController.navigate("player/${track.id}")
         }
@@ -368,7 +363,6 @@ fun TrackItemAlbum(
 
             IconButton(
                 onClick = {
-                    // Action du menu
                 },
                 modifier = Modifier.size(36.dp)
             ) {

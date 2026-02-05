@@ -31,6 +31,7 @@ import androidx.navigation.NavController
 import com.example.mozika.R
 import com.example.mozika.ui.player.components.SeekBar
 import com.example.mozika.ui.player.components.PremiumAudioWaveform
+import kotlinx.coroutines.delay
 
 @Composable
 fun PlayerScreen(
@@ -38,10 +39,19 @@ fun PlayerScreen(
     trackId: Long?
 ) {
     val vm: PlayerVM = hiltViewModel()
-    val context = LocalContext.current
+    val context = LocalContext.current // AJOUTÉ ICI
 
-    LaunchedEffect(trackId) {
-        if (trackId != null) {
+    // Utiliser une clé dérivée pour éviter les rechargements
+    val shouldLoadTrack by remember(trackId) {
+        derivedStateOf {
+            trackId != null && vm.currentTrack?.id != trackId
+        }
+    }
+
+    LaunchedEffect(shouldLoadTrack) {
+        if (shouldLoadTrack && trackId != null) {
+            // Petit délai pour laisser l'UI s'initialiser
+            delay(50)
             vm.load(trackId)
         }
     }
@@ -393,7 +403,7 @@ fun PlayerScreen(
                                     putExtra(Intent.EXTRA_SUBJECT, "Partager une musique")
                                 }
                                 ContextCompat.startActivity(
-                                    context,
+                                    context, // CORRIGÉ : Utilisation de la variable context
                                     Intent.createChooser(shareIntent, "Partager via"),
                                     null
                                 )

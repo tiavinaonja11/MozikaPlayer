@@ -157,15 +157,15 @@ fun LibraryScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp), // Réduit vertical de 8 à 6
-                    shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(10.dp),
                     color = Color(0xFF1DB954).copy(alpha = 0.2f),
                     tonalElevation = 2.dp
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp), // Réduit de 12 à 10
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -191,16 +191,16 @@ fun LibraryScreen(
                 selectedTabIndex = selectedTab,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp), // Réduit vertical de 8 à 6
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 containerColor = Color.Transparent,
                 contentColor = Color(0xFF1DB954),
                 indicator = { tabPositions ->
                     Box(
                         modifier = Modifier
                             .tabIndicatorOffset(tabPositions[selectedTab])
-                            .height(2.5.dp) // Réduit de 3 à 2.5
+                            .height(2.5.dp)
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)) // Réduit de 3 à 2
+                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
                             .background(Color(0xFF1DB954))
                     )
                 }
@@ -265,7 +265,7 @@ fun LibraryScreen(
                                             text = "Toutes les chansons",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp // Réduit de 22 à 20
+                                                fontSize = 20.sp
                                             ),
                                             color = Color.White
                                         )
@@ -310,7 +310,7 @@ fun LibraryScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 10.dp), // Réduit de 12 à 10
+                                            .padding(bottom = 10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -324,9 +324,9 @@ fun LibraryScreen(
                                         )
 
                                         Surface(
-                                            shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
+                                            shape = RoundedCornerShape(10.dp),
                                             color = Color(0xFF1E1E1E),
-                                            modifier = Modifier.padding(vertical = 3.dp) // Réduit de 4 à 3
+                                            modifier = Modifier.padding(vertical = 3.dp)
                                         ) {
                                             Text(
                                                 text = "${albums.size} albums",
@@ -411,29 +411,38 @@ fun TrackItem(
     navController: androidx.navigation.NavHostController
 ) {
     val playerVM: PlayerVM = hiltViewModel()
+    val coroutineScope = rememberCoroutineScope()
 
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
+        shape = RoundedCornerShape(10.dp),
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         onClick = {
-            playerVM.load(track.id, autoPlay = true)
-            navController.navigate("player/${track.id}")
+            coroutineScope.launch {
+                // 1. Naviguer vers le player
+                navController.navigate("player/${track.id}")
+
+                // 2. Attendre que la navigation soit effectuée
+                delay(50)
+
+                // 3. Charger la piste
+                playerVM.load(track.id, autoPlay = true)
+            }
         }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp), // Réduit de 16/12 à 14/10
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp) // Réduit de 48 à 44
-                    .clip(RoundedCornerShape(8.dp)), // Réduit de 10 à 8
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -452,11 +461,11 @@ fun TrackItem(
                     Icons.Rounded.MusicNote,
                     contentDescription = null,
                     tint = Color(0xFF1DB954),
-                    modifier = Modifier.size(22.dp) // Réduit de 24 à 22
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp)) // Réduit de 14 à 12
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -465,14 +474,14 @@ fun TrackItem(
                     text = track.title,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp // Réduit de 16 à 15
+                        fontSize = 15.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = Color.White
                 )
 
-                Spacer(modifier = Modifier.height(3.dp)) // Réduit de 4 à 3
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -480,7 +489,7 @@ fun TrackItem(
                     Text(
                         text = track.artist,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 13.sp // Réduit de 14 à 13
+                            fontSize = 13.sp
                         ),
                         color = Color(0xFFB3B3B3),
                         maxLines = 1,
@@ -488,12 +497,12 @@ fun TrackItem(
                         modifier = Modifier.weight(1f)
                     )
 
-                    Spacer(modifier = Modifier.width(6.dp)) // Réduit de 8 à 6
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Text(
                         text = formatDuration(track.duration),
                         style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 11.sp, // Réduit de 12 à 11
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         ),
                         color = Color(0xFF808080),
@@ -501,17 +510,17 @@ fun TrackItem(
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp)) // Réduit de 8 à 6
+            Spacer(modifier = Modifier.width(6.dp))
 
             IconButton(
                 onClick = { /* Action simple du menu */ },
-                modifier = Modifier.size(34.dp) // Réduit de 36 à 34
+                modifier = Modifier.size(34.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "Menu",
                     tint = Color(0xFF808080),
-                    modifier = Modifier.size(18.dp) // Réduit de 20 à 18
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }

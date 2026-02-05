@@ -25,6 +25,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.mozika.ui.nav.navigateToTrack
 import com.example.mozika.ui.player.PlayerVM
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +41,7 @@ fun ArtistDetailScreen(
 
     // Récupérer PlayerVM
     val playerVM: PlayerVM = hiltViewModel()
+    val coroutineScope = rememberCoroutineScope()
 
     // Trouver l'artiste correspondant
     val artist = remember(artistId, artists) {
@@ -206,10 +209,19 @@ fun ArtistDetailScreen(
                         Button(
                             onClick = {
                                 if (artistTracks.isNotEmpty()) {
-                                    // Charger toute la playlist de l'artiste
-                                    playerVM.loadArtist(artist.name)
-                                    // Naviguer vers la première piste
-                                    navController.navigateToTrack(artistTracks.first().id)
+                                    coroutineScope.launch {
+                                        // 1. Charger toute la playlist de l'artiste
+                                        playerVM.loadArtist(artist.name)
+
+                                        // 2. Attendre un peu pour que la playlist soit chargée
+                                        delay(50)
+
+                                        // 3. Naviguer vers la première piste
+                                        navController.navigateToTrack(artistTracks.first().id)
+
+                                        // 4. Charger la première piste
+                                        playerVM.load(artistTracks.first().id, autoPlay = true)
+                                    }
                                 }
                             },
                             modifier = Modifier
@@ -323,6 +335,8 @@ fun TrackItemArtist(
     artistName: String,
     playerVM: PlayerVM
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
@@ -331,11 +345,19 @@ fun TrackItemArtist(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         onClick = {
-            // Charger toute la playlist de l'artiste
-            playerVM.loadArtist(artistName)
-            // Puis charger cette piste spécifique
-            playerVM.load(track.id, autoPlay = true)
-            navController.navigate("player/${track.id}")
+            coroutineScope.launch {
+                // 1. Charger toute la playlist de l'artiste
+                playerVM.loadArtist(artistName)
+
+                // 2. Attendre un peu
+                delay(50)
+
+                // 3. Naviguer vers le player
+                navController.navigate("player/${track.id}")
+
+                // 4. Charger cette piste spécifique
+                playerVM.load(track.id, autoPlay = true)
+            }
         }
     ) {
         Row(

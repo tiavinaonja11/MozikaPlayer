@@ -18,12 +18,12 @@ class PlayerStateManager {
     val playlist: StateFlow<List<com.example.mozika.domain.model.Track>> = _playlist.asStateFlow()
     val playlistContext: StateFlow<PlayerVM.PlaylistContext> = _playlistContext.asStateFlow()
 
-    fun updateFromPlayerVM(playerVM: PlayerVM) {
-        _currentTrack.value = playerVM.currentTrack
-        _isPlaying.value = playerVM.isPlaying
-        _playlist.value = playerVM.playlist
-        _playlistContext.value = playerVM.playlistContext
-    }
+        fun updateFromPlayerVM(playerVM: PlayerVM) {
+            _currentTrack.value = playerVM.currentTrack
+            _isPlaying.value = playerVM.isPlaying
+            _playlist.value = playerVM.playlist
+            _playlistContext.value = playerVM.playlistContext
+        }
 }
 
 // Composable pour obtenir l'état du player

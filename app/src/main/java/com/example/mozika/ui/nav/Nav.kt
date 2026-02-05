@@ -90,7 +90,7 @@ fun AppNav(
 }
 
 // Fonctions d'extension simplifiées
-fun NavHostController.navigateToAlbum(albumId: String) {
+fun NavHostController.navigateToAlbum(albumId: NavHostController) {
     this.navigate("album/$albumId") {
         launchSingleTop = true
     }
