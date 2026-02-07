@@ -23,12 +23,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.mozika.ui.player.PlayerVM
 import kotlinx.coroutines.delay
@@ -410,8 +412,9 @@ fun TrackItem(
     track: com.example.mozika.domain.model.Track,
     navController: androidx.navigation.NavHostController
 ) {
-    val playerVM: PlayerVM = hiltViewModel()
-    val coroutineScope = rememberCoroutineScope()
+    val playerVM: PlayerVM = viewModel(
+        viewModelStoreOwner = LocalContext.current as androidx.lifecycle.ViewModelStoreOwner
+    )
 
     Surface(
         modifier = Modifier
@@ -421,18 +424,10 @@ fun TrackItem(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         onClick = {
-            coroutineScope.launch {
-                // 1. Naviguer vers le player
-                navController.navigate("player/${track.id}")
-
-                // 2. Attendre que la navigation soit effectuée
-                delay(50)
-
-                // 3. Charger la piste
-                playerVM.load(track.id, autoPlay = true)
-            }
+            playerVM.load(track.id, autoPlay = true)
+            navController.navigate("player/${track.id}")
         }
-    ) {
+    )	{
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -535,7 +530,7 @@ fun AlbumItem(
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
+        shape = RoundedCornerShape(10.dp),
         color = Color(0xFF1E1E1E),
         tonalElevation = 0.dp,
         onClick = {

@@ -12,20 +12,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.mozika.domain.model.Track
 
 @Composable
 fun MiniPlayerBar(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
-    val playerVM: PlayerVM = hiltViewModel()
+    // ✅ Utiliser viewModel() avec le bon scope pour partager l'instance
+    val playerVM: PlayerVM = viewModel(
+        viewModelStoreOwner = LocalContext.current as androidx.lifecycle.ViewModelStoreOwner
+    )
 
     // ✅ Observer l'état du player via StateFlow
     val playerState by playerVM.playerState.collectAsState()
@@ -39,17 +45,21 @@ fun MiniPlayerBar(
         currentRoute?.startsWith("player/") == true
     }
 
+    // DEBUG : Log pour vérifier l'état
+    LaunchedEffect(playerState.currentTrack?.id, isInPlayerScreen, playerState.isPlaying) {
+        println("🎵 MiniPlayerBar DEBUG:")
+        println("   - Current Track: ${playerState.currentTrack?.title} (ID: ${playerState.currentTrack?.id})")
+        println("   - Is Playing: ${playerState.isPlaying}")
+        println("   - Playlist Size: ${playerState.playlist.size}")
+        println("   - Is in Player Screen: $isInPlayerScreen")
+        println("   - Should Show: ${playerState.currentTrack != null && !isInPlayerScreen}")
+    }
+
     // ✅ Afficher seulement si :
     // 1. On a une piste chargée
     // 2. On n'est PAS sur l'écran Player
     val shouldShow = playerState.currentTrack != null && !isInPlayerScreen
 
-    // DEBUG : Log pour vérifier
-    LaunchedEffect(playerState.currentTrack?.id, isInPlayerScreen) {
-        println("🎵 MiniPlayerBar - Piste: ${playerState.currentTrack?.title}, isInPlayerScreen: $isInPlayerScreen, shouldShow: $shouldShow")
-    }
-
-    // ✅ Afficher le MiniPlayer
     if (shouldShow) {
         MiniPlayerContent(
             track = playerState.currentTrack!!,
@@ -74,14 +84,18 @@ fun MiniPlayerBar(
             },
             modifier = modifier
         )
+    } else if (playerState.currentTrack != null) {
+        // DEBUG : Pour voir pourquoi le MiniPlayer n'est pas affiché
+        println("🎵 MiniPlayerBar NOT SHOWING but has track: ${playerState.currentTrack?.title}")
+        println("   - Is in Player Screen: $isInPlayerScreen")
     }
 }
 
 @Composable
 private fun MiniPlayerContent(
-    track: com.example.mozika.domain.model.Track,
+    track: Track,
     isPlaying: Boolean,
-    playlist: List<com.example.mozika.domain.model.Track>,
+    playlist: List<Track>,
     onTrackClick: () -> Unit,
     onPrevious: () -> Unit,
     onPlayPause: () -> Unit,
@@ -92,7 +106,11 @@ private fun MiniPlayerContent(
         modifier = modifier
             .fillMaxWidth()
             .height(70.dp)
-            .clickable(onClick = onTrackClick),
+            .clickable(
+                onClick = onTrackClick,
+                indication = null,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            ),
         shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF1E1E1E)

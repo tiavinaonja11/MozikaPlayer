@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.mozika.R
 import com.example.mozika.ui.player.components.SeekBar
@@ -38,8 +39,12 @@ fun PlayerScreen(
     navController: NavController,
     trackId: Long?
 ) {
-    val vm: PlayerVM = hiltViewModel()
+    //val vm: PlayerVM = hiltViewModel()
     val context = LocalContext.current // AJOUTÉ ICI
+
+    val vm: PlayerVM = viewModel(
+        viewModelStoreOwner = LocalContext.current as androidx.lifecycle.ViewModelStoreOwner
+    )
 
     // Utiliser une clé dérivée pour éviter les rechargements
     val shouldLoadTrack by remember(trackId) {
