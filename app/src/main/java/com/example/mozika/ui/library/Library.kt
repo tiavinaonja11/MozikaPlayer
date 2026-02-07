@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.mozika.ui.library.components.TrackItem
 import com.example.mozika.ui.player.PlayerVM
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -407,7 +408,7 @@ fun LibraryScreen(
     }
 }
 
-@Composable
+/*@Composable
 fun TrackItem(
     track: com.example.mozika.domain.model.Track,
     navController: androidx.navigation.NavHostController
@@ -520,7 +521,7 @@ fun TrackItem(
             }
         }
     }
-}
+}*/
 
 @Composable
 fun AlbumItem(
