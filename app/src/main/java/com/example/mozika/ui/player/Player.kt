@@ -139,7 +139,7 @@ fun PlayerScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp), // Réduit la hauteur
+                    .height(240.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color(0xFF1E1E1E)
@@ -199,7 +199,7 @@ fun PlayerScreen(
                     text = vm.currentTrack?.album ?: "Album inconnu",
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = Color(0xFF808080),
-                        fontSize = 12.sp // Plus petit
+                        fontSize = 12.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -217,7 +217,7 @@ fun PlayerScreen(
                 isPlaying = vm.isPlaying,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp), // Hauteur réduite
+                    .height(100.dp),
                 onSeek = { percent ->
                     vm.seekTo((percent * vm.duration).toLong())
                 }
@@ -251,14 +251,14 @@ fun PlayerScreen(
                         text = formatTime(vm.position),
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = Color(0xFFB3B3B3),
-                            fontSize = 10.sp // Plus petit
+                            fontSize = 10.sp
                         )
                     )
                     Text(
                         text = formatTime(vm.duration),
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = Color(0xFFB3B3B3),
-                            fontSize = 10.sp // Plus petit
+                            fontSize = 10.sp
                         )
                     )
                 }

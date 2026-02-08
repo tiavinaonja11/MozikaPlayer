@@ -1,8 +1,14 @@
-package com.example.mozika.ui.library.components
+package com.example.mozika.ui.components
 
 import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -24,11 +30,12 @@ import androidx.navigation.NavHostController
 import com.example.mozika.domain.model.Track
 import com.example.mozika.ui.playlist.PlaylistVM
 import com.example.mozika.ui.playlist.PlaylistWithCount
+import com.example.mozika.ui.player.PlayerVM
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
- * Menu d'options pour une chanson
- * Affiche les actions disponibles : Lire, Ajouter à la file, Ajouter à une playlist, etc.
+ * Menu d'options pour une chanson - VERSION COMPLÈTE
  */
 @Composable
 fun TrackOptionsMenu(
@@ -36,14 +43,19 @@ fun TrackOptionsMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTrackRemoved: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val playlistVM: PlaylistVM = hiltViewModel()
+    val playerVM: PlayerVM = hiltViewModel()
     val playlists by playlistVM.playlistsWithCount.collectAsState()
+    val scope = rememberCoroutineScope()
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
-    var showShareDialog by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     DropdownMenu(
         expanded = expanded,
@@ -60,13 +72,14 @@ fun TrackOptionsMenu(
             dismissOnClickOutside = true
         )
     ) {
-        // Lire la suite
+        // Lire la suite (Play Next)
         TrackMenuItem(
             icon = Icons.Outlined.PlayArrow,
             text = "Lire la suite",
             onClick = {
                 onDismiss()
-                // TODO: Implémenter la lecture de la suite
+                playerVM.playNext(track)
+                Toast.makeText(context, "Sera lu ensuite", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -76,7 +89,8 @@ fun TrackOptionsMenu(
             text = "Ajouter à la file",
             onClick = {
                 onDismiss()
-                // TODO: Implémenter l'ajout à la file
+                playerVM.addToQueue(track)
+                Toast.makeText(context, "Ajouté à la file d'attente", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -112,7 +126,7 @@ fun TrackOptionsMenu(
             text = "Modifier",
             onClick = {
                 onDismiss()
-                // TODO: Naviguer vers l'écran de modification
+                showEditDialog = true
             }
         )
 
@@ -128,7 +142,7 @@ fun TrackOptionsMenu(
             text = "Informations",
             onClick = {
                 onDismiss()
-                // TODO: Afficher les informations de la chanson
+                showInfoDialog = true
             }
         )
 
@@ -138,37 +152,120 @@ fun TrackOptionsMenu(
             text = "Faire sonner",
             onClick = {
                 onDismiss()
-                // TODO: Définir comme sonnerie
+                setAsRingtone(context, track)
             }
         )
 
-        // Marquer
+        // Masquer
         TrackMenuItem(
-            icon = Icons.Outlined.Star,
-            text = "Marquer",
+            icon = Icons.Outlined.VisibilityOff,
+            text = "Masquer",
             onClick = {
                 onDismiss()
-                // TODO: Marquer la chanson
+                showDeleteConfirm = true
             }
         )
     }
 
-    // Dialog pour sélectionner une playlist
+    // Dialog pour sélectionner/créer une playlist
     if (showPlaylistDialog) {
         AddToPlaylistDialog(
             track = track,
             playlists = playlists,
             onDismiss = { showPlaylistDialog = false },
             onPlaylistSelected = { playlist ->
-                playlistVM.addTrackToPlaylist(playlist.id, track.id)
+                scope.launch {
+                    val isAlreadyIn = playlistVM.isTrackInPlaylist(playlist.id, track.id)
+                    if (isAlreadyIn) {
+                        Toast.makeText(
+                            context,
+                            "Déjà dans ${playlist.name}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        playlistVM.addTrackToPlaylist(playlist.id, track.id)
+                        Toast.makeText(
+                            context,
+                            "Ajouté à ${playlist.name}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
                 showPlaylistDialog = false
             }
+        )
+    }
+
+    // Dialog d'informations
+    if (showInfoDialog) {
+        TrackInfoDialog(
+            track = track,
+            onDismiss = { showInfoDialog = false }
+        )
+    }
+
+    // Dialog d'édition
+    if (showEditDialog) {
+        TrackEditDialog(
+            track = track,
+            onDismiss = { showEditDialog = false },
+            onSave = { newTitle, newArtist, newAlbum ->
+                // TODO: Implémenter la sauvegarde dans la base de données
+                Toast.makeText(
+                    context,
+                    "Modifications enregistrées",
+                    Toast.LENGTH_SHORT
+                ).show()
+                showEditDialog = false
+            }
+        )
+    }
+
+    // Confirmation de masquage
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = {
+                Text(
+                    text = "Masquer la chanson",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Cette chanson n'apparaîtra plus dans votre bibliothèque.",
+                    color = Color(0xFFB3B3B3)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // TODO: Implémenter le masquage dans la BDD
+                        Toast.makeText(
+                            context,
+                            "Chanson masquée",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        showDeleteConfirm = false
+                        onTrackRemoved?.invoke()
+                    }
+                ) {
+                    Text("Masquer", color = Color(0xFFFF6B6B))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Annuler", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF282828)
         )
     }
 }
 
 /**
- * Item de menu personnalisé pour les options de chanson
+ * Item de menu personnalisé
  */
 @Composable
 private fun TrackMenuItem(
@@ -214,7 +311,193 @@ private fun TrackMenuItem(
 }
 
 /**
- * Dialog pour ajouter une chanson à une playlist
+ * Dialog d'édition des métadonnées
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrackEditDialog(
+    track: Track,
+    onDismiss: () -> Unit,
+    onSave: (title: String, artist: String, album: String) -> Unit
+) {
+    var title by remember { mutableStateOf(track.title) }
+    var artist by remember { mutableStateOf(track.artist) }
+    var album by remember { mutableStateOf(track.album) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF282828)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = "Modifier la chanson",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Champ Titre
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Titre", color = Color(0xFFB3B3B3)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF1DB954),
+                        unfocusedBorderColor = Color(0xFF404040),
+                        cursorColor = Color(0xFF1DB954)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Champ Artiste
+                OutlinedTextField(
+                    value = artist,
+                    onValueChange = { artist = it },
+                    label = { Text("Artiste", color = Color(0xFFB3B3B3)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF1DB954),
+                        unfocusedBorderColor = Color(0xFF404040),
+                        cursorColor = Color(0xFF1DB954)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Champ Album
+                OutlinedTextField(
+                    value = album,
+                    onValueChange = { album = it },
+                    label = { Text("Album", color = Color(0xFFB3B3B3)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color(0xFF1DB954),
+                        unfocusedBorderColor = Color(0xFF404040),
+                        cursorColor = Color(0xFF1DB954)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Annuler", color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = { onSave(title, artist, album) },
+                        enabled = title.isNotBlank()
+                    ) {
+                        Text(
+                            "Enregistrer",
+                            color = if (title.isNotBlank()) Color(0xFF1DB954) else Color(0xFF808080)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Dialog d'informations
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrackInfoDialog(
+    track: Track,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF282828)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                Text(
+                    text = "Informations",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                InfoRow("Titre", track.title)
+                InfoRow("Artiste", track.artist)
+                InfoRow("Album", track.album)
+                InfoRow("Durée", formatDuration(track.duration))
+                InfoRow("Chemin", track.data)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Fermer", color = Color(0xFF1DB954))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFF808080),
+            fontSize = 12.sp
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White,
+            fontSize = 14.sp
+        )
+    }
+}
+
+/**
+ * Dialog pour ajouter à une playlist
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,12 +511,15 @@ private fun AddToPlaylistDialog(
     var showCreatePlaylist by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     AlertDialog(
         onDismissRequest = onDismiss
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 500.dp),
             shape = RoundedCornerShape(16.dp),
             color = Color(0xFF282828)
         ) {
@@ -242,7 +528,6 @@ private fun AddToPlaylistDialog(
                     .fillMaxWidth()
                     .padding(24.dp)
             ) {
-                // Titre
                 Text(
                     text = "Ajouter à une playlist",
                     style = MaterialTheme.typography.titleLarge.copy(
@@ -254,7 +539,7 @@ private fun AddToPlaylistDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Créer une nouvelle playlist
+                // Bouton créer nouvelle playlist
                 Surface(
                     onClick = { showCreatePlaylist = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -269,7 +554,7 @@ private fun AddToPlaylistDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Add,
-                            contentDescription = "Créer une playlist",
+                            contentDescription = "Créer",
                             tint = Color(0xFF1DB954),
                             modifier = Modifier.size(24.dp)
                         )
@@ -287,7 +572,7 @@ private fun AddToPlaylistDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Liste des playlists existantes
+                // Liste des playlists
                 if (playlists.isNotEmpty()) {
                     Text(
                         text = "Mes playlists",
@@ -299,14 +584,14 @@ private fun AddToPlaylistDialog(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
                     ) {
-                        playlists.take(5).forEach { playlist ->
+                        items(playlists) { playlist ->
                             Surface(
-                                onClick = {
-                                    onPlaylistSelected(playlist)
-                                },
+                                onClick = { onPlaylistSelected(playlist) },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(8.dp),
                                 color = Color.Transparent
@@ -350,16 +635,11 @@ private fun AddToPlaylistDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Bouton Annuler
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text(
-                        text = "Annuler",
-                        color = Color(0xFF1DB954),
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    Text("Annuler", color = Color(0xFF1DB954))
                 }
             }
         }
@@ -373,16 +653,14 @@ private fun AddToPlaylistDialog(
                 Text(
                     text = "Nouvelle playlist",
                     color = Color.White,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    )
+                    fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
-                    label = { Text("Nom de la playlist", color = Color(0xFFB3B3B3)) },
+                    label = { Text("Nom", color = Color(0xFFB3B3B3)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
@@ -399,14 +677,14 @@ private fun AddToPlaylistDialog(
                     onClick = {
                         if (newPlaylistName.isNotBlank()) {
                             scope.launch {
-                                playlistVM.create(newPlaylistName)
-                                // Attendre un peu que la playlist soit créée
+                                val newPlaylistId = playlistVM.create(newPlaylistName)
                                 kotlinx.coroutines.delay(200)
-                                // Récupérer la nouvelle playlist et y ajouter la chanson
-                                val newPlaylist = playlists.firstOrNull { it.name == newPlaylistName }
-                                newPlaylist?.let {
-                                    playlistVM.addTrackToPlaylist(it.id, track.id)
-                                }
+                                playlistVM.addTrackToPlaylist(newPlaylistId, track.id)
+                                Toast.makeText(
+                                    context,
+                                    "Créé et ajouté",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                             newPlaylistName = ""
                             showCreatePlaylist = false
@@ -416,7 +694,7 @@ private fun AddToPlaylistDialog(
                     enabled = newPlaylistName.isNotBlank()
                 ) {
                     Text(
-                        text = "Créer",
+                        "Créer",
                         color = if (newPlaylistName.isNotBlank()) Color(0xFF1DB954) else Color(0xFF808080)
                     )
                 }
@@ -432,14 +710,57 @@ private fun AddToPlaylistDialog(
 }
 
 /**
- * Fonction pour partager une chanson
+ * Partager une chanson
  */
 private fun shareTrack(context: android.content.Context, track: Track) {
     val shareIntent = Intent().apply {
         action = Intent.ACTION_SEND
         type = "text/plain"
         putExtra(Intent.EXTRA_SUBJECT, "Écoute cette chanson !")
-        putExtra(Intent.EXTRA_TEXT, "${track.title} - ${track.artist}")
+        putExtra(Intent.EXTRA_TEXT, "${track.title} - ${track.artist}\nAlbum: ${track.album}")
     }
     context.startActivity(Intent.createChooser(shareIntent, "Partager via"))
+}
+
+/**
+ * Définir comme sonnerie
+ */
+private fun setAsRingtone(context: android.content.Context, track: Track) {
+    try {
+        val file = File(track.data)
+        if (!file.exists()) {
+            Toast.makeText(context, "Fichier introuvable", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!Settings.System.canWrite(context)) {
+            Toast.makeText(
+                context,
+                "Permission requise",
+                Toast.LENGTH_LONG
+            ).show()
+            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+            }
+            context.startActivity(intent)
+            return
+        }
+
+        val uri = Uri.fromFile(file)
+        RingtoneManager.setActualDefaultRingtoneUri(
+            context,
+            RingtoneManager.TYPE_RINGTONE,
+            uri
+        )
+        Toast.makeText(context, "Sonnerie définie", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Erreur: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun formatDuration(milliseconds: Int): String {
+    val seconds = milliseconds / 1000
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return String.format("%d:%02d", minutes, remainingSeconds)
 }

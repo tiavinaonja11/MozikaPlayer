@@ -253,14 +253,14 @@ fun LibraryScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), // Réduit de 12 à 10
-                                verticalArrangement = Arrangement.spacedBy(6.dp) // Réduit de 8 à 6
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 10.dp), // Réduit de 12 à 10
+                                            .padding(bottom = 10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -274,18 +274,18 @@ fun LibraryScreen(
                                         )
 
                                         Surface(
-                                            shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
+                                            shape = RoundedCornerShape(10.dp),
                                             color = Color(0xFF1E1E1E),
-                                            modifier = Modifier.padding(vertical = 3.dp) // Réduit de 4 à 3
+                                            modifier = Modifier.padding(vertical = 3.dp)
                                         ) {
                                             Text(
                                                 text = "${tracks.size} titres",
                                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontSize = 12.sp, // Réduit de 13 à 12
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 color = Color(0xFFB3B3B3),
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp) // Réduit
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                             )
                                         }
                                     }
@@ -306,8 +306,8 @@ fun LibraryScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), // Réduit de 12 à 10
-                                verticalArrangement = Arrangement.spacedBy(6.dp) // Réduit de 8 à 6
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 item {
                                     Row(
@@ -321,7 +321,7 @@ fun LibraryScreen(
                                             text = "Albums",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp // Réduit de 22 à 20
+                                                fontSize = 20.sp
                                             ),
                                             color = Color.White
                                         )
@@ -334,11 +334,11 @@ fun LibraryScreen(
                                             Text(
                                                 text = "${albums.size} albums",
                                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontSize = 12.sp, // Réduit de 13 à 12
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 color = Color(0xFFB3B3B3),
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp) // Réduit
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                             )
                                         }
                                     }
@@ -359,14 +359,14 @@ fun LibraryScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp), // Réduit de 12 à 10
-                                verticalArrangement = Arrangement.spacedBy(6.dp) // Réduit de 8 à 6
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(bottom = 10.dp), // Réduit de 12 à 10
+                                            .padding(bottom = 10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -374,24 +374,24 @@ fun LibraryScreen(
                                             text = "Artistes",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 20.sp // Réduit de 22 à 20
+                                                fontSize = 20.sp
                                             ),
                                             color = Color.White
                                         )
 
                                         Surface(
-                                            shape = RoundedCornerShape(10.dp), // Réduit de 12 à 10
+                                            shape = RoundedCornerShape(10.dp),
                                             color = Color(0xFF1E1E1E),
-                                            modifier = Modifier.padding(vertical = 3.dp) // Réduit de 4 à 3
+                                            modifier = Modifier.padding(vertical = 3.dp)
                                         ) {
                                             Text(
                                                 text = "${artists.size} artistes",
                                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                                    fontSize = 12.sp, // Réduit de 13 à 12
+                                                    fontSize = 12.sp,
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 color = Color(0xFFB3B3B3),
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp) // Réduit
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                             )
                                         }
                                     }
@@ -407,121 +407,6 @@ fun LibraryScreen(
         }
     }
 }
-
-/*@Composable
-fun TrackItem(
-    track: com.example.mozika.domain.model.Track,
-    navController: androidx.navigation.NavHostController
-) {
-    val playerVM: PlayerVM = viewModel(
-        viewModelStoreOwner = LocalContext.current as androidx.lifecycle.ViewModelStoreOwner
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF1E1E1E),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        onClick = {
-            playerVM.load(track.id, autoPlay = true)
-            navController.navigate("player/${track.id}")
-        }
-    )	{
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF1DB954).copy(alpha = 0.3f),
-                                    Color(0xFF1DB954).copy(alpha = 0.1f)
-                                )
-                            )
-                        )
-                )
-                Icon(
-                    Icons.Rounded.MusicNote,
-                    contentDescription = null,
-                    tint = Color(0xFF1DB954),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(3.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = track.artist,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 13.sp
-                        ),
-                        color = Color(0xFFB3B3B3),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Text(
-                        text = formatDuration(track.duration),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        color = Color(0xFF808080),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(6.dp))
-
-            IconButton(
-                onClick = { /* Action simple du menu */ },
-                modifier = Modifier.size(34.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = "Menu",
-                    tint = Color(0xFF808080),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-    }
-}*/
 
 @Composable
 fun AlbumItem(
@@ -541,13 +426,13 @@ fun AlbumItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp), // Réduit de 16 à 14
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(52.dp) // Réduit de 56 à 52
-                    .clip(RoundedCornerShape(8.dp)), // Réduit de 10 à 8
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -559,11 +444,11 @@ fun AlbumItem(
                     Icons.Rounded.Album,
                     contentDescription = null,
                     tint = Color(0xFF1DB954),
-                    modifier = Modifier.size(26.dp) // Réduit de 28 à 26
+                    modifier = Modifier.size(26.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp)) // Réduit de 16 à 14
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(
                 modifier = Modifier.weight(1f)

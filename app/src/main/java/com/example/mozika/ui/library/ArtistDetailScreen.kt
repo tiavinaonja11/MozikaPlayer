@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -210,17 +211,22 @@ fun ArtistDetailScreen(
                             onClick = {
                                 if (artistTracks.isNotEmpty()) {
                                     coroutineScope.launch {
-                                        // 1. Charger toute la playlist de l'artiste
-                                        playerVM.loadArtist(artist.name)
+                                        // 1. Récupérer toutes les chansons de l'artiste
+                                        val tracks = playerVM.loadArtistTracks(artist.name)
 
-                                        // 2. Attendre un peu pour que la playlist soit chargée
+                                        // 2. Charger la playlist avec le contexte Artist
+                                        playerVM.loadWithPlaylist(
+                                            trackId = artistTracks.first().id,
+                                            newPlaylist = tracks,
+                                            context = PlayerVM.PlaylistContext.Artist(artist.name),
+                                            autoPlay = true
+                                        )
+
+                                        // 3. Attendre un peu pour que la playlist soit chargée
                                         delay(50)
 
-                                        // 3. Naviguer vers la première piste
+                                        // 4. Naviguer vers la première piste
                                         navController.navigateToTrack(artistTracks.first().id)
-
-                                        // 4. Charger la première piste
-                                        playerVM.load(artistTracks.first().id, autoPlay = true)
                                     }
                                 }
                             },
@@ -336,6 +342,7 @@ fun TrackItemArtist(
     playerVM: PlayerVM
 ) {
     val coroutineScope = rememberCoroutineScope()
+    var showMenu by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier
@@ -346,17 +353,22 @@ fun TrackItemArtist(
         shadowElevation = 0.dp,
         onClick = {
             coroutineScope.launch {
-                // 1. Charger toute la playlist de l'artiste
-                playerVM.loadArtist(artistName)
+                // 1. Récupérer toutes les chansons de l'artiste
+                val artistTracks = playerVM.loadArtistTracks(artistName)
 
-                // 2. Attendre un peu
+                // 2. Charger la playlist avec le contexte Artist
+                playerVM.loadWithPlaylist(
+                    trackId = track.id,
+                    newPlaylist = artistTracks,
+                    context = PlayerVM.PlaylistContext.Artist(artistName),
+                    autoPlay = true
+                )
+
+                // 3. Attendre un peu
                 delay(50)
 
-                // 3. Naviguer vers le player
+                // 4. Naviguer vers le player
                 navController.navigate("player/${track.id}")
-
-                // 4. Charger cette piste spécifique
-                playerVM.load(track.id, autoPlay = true)
             }
         }
     ) {
@@ -435,18 +447,153 @@ fun TrackItemArtist(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            IconButton(
-                onClick = {
-                    // Action du menu
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = "Menu",
-                    tint = Color(0xFF808080),
-                    modifier = Modifier.size(20.dp)
-                )
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = "Menu",
+                        tint = Color(0xFF808080),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    offset = DpOffset(0.dp, (-56).dp),
+                    modifier = Modifier
+                        .background(Color(0xFF282828))
+                        .width(200.dp)
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Lire la suite", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Queue,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Ajouter à la liste", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.PlaylistAdd,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Ajouter à la Playlist", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Share,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Partager", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Info,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Informations", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Notifications,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Faire sonne sonnerie", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Rounded.Delete,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text("Masquer", color = Color.White)
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                        }
+                    )
+                }
             }
         }
     }

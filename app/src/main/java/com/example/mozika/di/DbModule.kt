@@ -22,7 +22,7 @@ object DbModule {
         Room.databaseBuilder(
             app,
             AppDatabase::class.java,
-            "sonic.db"
+            "sonic_v2.db" // Changed name to force recreation
         )
             .fallbackToDestructiveMigration() // Temporaire - à remplacer par une migration
             .build()

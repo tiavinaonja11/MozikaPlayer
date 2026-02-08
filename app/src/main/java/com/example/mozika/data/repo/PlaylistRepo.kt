@@ -42,14 +42,23 @@ class PlaylistRepo @Inject constructor(
         dao.rename(playlistId, newName)
     }
 
-    /* Ajouter une piste dans une playlist */
+    /* Ajouter une piste dans une playlist - CORRIGÉ */
     suspend fun addTrack(playlistId: Long, trackId: Long) {
         // Vérifier si le track n'est pas déjà dans la playlist
         if (!dao.isTrackInPlaylist(playlistId, trackId)) {
             // Calculer la prochaine position
-            val currentCount = dao.trackCount(playlistId)
-            val position = currentCount + 1
-            dao.addTrack(PlaylistTrack(playlistId, trackId, position))
+            val maxPosition = dao.getMaxPosition(playlistId) ?: -1
+            val nextPosition = maxPosition + 1
+
+            // Créer l'entrée PlaylistTrack - SANS le paramètre addedAt car il a une valeur par défaut
+            val playlistTrack = PlaylistTrack(
+                playlistId = playlistId,
+                trackId = trackId,
+                position = nextPosition
+                // addedAt est automatiquement défini avec la valeur par défaut
+            )
+
+            dao.addTrack(playlistTrack)
         }
     }
 

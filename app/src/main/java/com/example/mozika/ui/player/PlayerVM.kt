@@ -14,15 +14,18 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.mozika.data.datastore.PlayerPreferences
+import com.example.mozika.data.db.entity.Track
 import com.example.mozika.data.datastore.PlayerState as SavedPlayerState
 import com.example.mozika.ui.player.AudioWaveformAnalyzer
 import com.example.mozika.data.repo.TrackRepo
 import com.example.mozika.domain.model.Track as DomainTrack
 import com.example.mozika.domain.usecase.GenWaveform
+import com.example.mozika.domain.usecase.GetTracks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -34,8 +37,55 @@ class PlayerVM @Inject constructor(
     private val exoPlayer: ExoPlayer,
     private val genWaveform: GenWaveform,
     private val trackRepo: TrackRepo,
-    private val playerPreferences: PlayerPreferences
+    private val playerPreferences: PlayerPreferences,
+    private val getTracks: GetTracks
 ) : ViewModel() {
+
+    // ============================================
+    // PROPRIÉTÉS DE FILE D'ATTENTE (NOUVELLES)
+    // ============================================
+
+    /**
+     * File d'attente complète (Track Entity)
+     */
+    private val _queue = MutableStateFlow<List<Track>>(emptyList())
+    val queue: StateFlow<List<Track>> = _queue.asStateFlow()
+
+    /**
+     * Index de la chanson en cours dans la file
+     */
+    private val _currentQueueIndex = MutableStateFlow(0)
+    val currentQueueIndex: StateFlow<Int> = _currentQueueIndex.asStateFlow()
+
+    /**
+     * Chanson actuellement en lecture (StateFlow)
+     */
+    private val _currentTrackFlow = MutableStateFlow<Track?>(null)
+    val currentTrackFlow: StateFlow<Track?> = _currentTrackFlow.asStateFlow()
+
+    /**
+     * État de lecture (StateFlow)
+     */
+    private val _isPlayingFlow = MutableStateFlow(false)
+    val isPlayingFlow: StateFlow<Boolean> = _isPlayingFlow.asStateFlow()
+
+    /**
+     * Mode de répétition (StateFlow)
+     */
+    private val _repeatModeFlow = MutableStateFlow(RepeatMode.OFF)
+    val repeatModeFlow: StateFlow<RepeatMode> = _repeatModeFlow.asStateFlow()
+
+    /**
+     * Mode aléatoire (StateFlow)
+     */
+    private val _isShuffleEnabled = MutableStateFlow(false)
+    val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
+
+    private var originalQueue: List<Track> = emptyList()
+
+    // ============================================
+    // PROPRIÉTÉS EXISTANTES (CONSERVÉES)
+    // ============================================
 
     var position by mutableLongStateOf(0L)
         private set
@@ -98,39 +148,398 @@ class PlayerVM @Inject constructor(
         loadAllTracks()
     }
 
+    // ============================================
+    // MÉTHODES DE FILE D'ATTENTE (NOUVELLES)
+    // ============================================
+
+    /**
+     * Ajoute une chanson à la fin de la file d'attente
+     */
+    fun addToQueue(track: DomainTrack) {
+        viewModelScope.launch {
+            // Convertir DomainTrack en Track Entity
+            val entityTrack = Track(
+                id = track.id,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                duration = track.duration,
+                dateAdded = track.dateAdded,
+                path = track.data
+            )
+
+            val currentQueue = _queue.value.toMutableList()
+            if (!currentQueue.any { it.id == entityTrack.id }) {
+                currentQueue.add(entityTrack)
+                _queue.value = currentQueue
+            }
+        }
+    }
+
+    /**
+     * Ajoute une chanson pour qu'elle soit lue juste après la chanson actuelle
+     */
+    fun playNext(track: DomainTrack) {
+        viewModelScope.launch {
+            // Convertir DomainTrack en Track Entity
+            val entityTrack = Track(
+                id = track.id,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                duration = track.duration,
+                dateAdded = track.dateAdded,
+                path = track.data
+            )
+
+            val currentQueue = _queue.value.toMutableList()
+
+            // Retirer si déjà présent
+            currentQueue.removeAll { it.id == entityTrack.id }
+
+            // Insérer après la chanson actuelle
+            val insertIndex = _currentQueueIndex.value + 1
+            if (insertIndex <= currentQueue.size) {
+                currentQueue.add(insertIndex, entityTrack)
+            } else {
+                currentQueue.add(entityTrack)
+            }
+
+            _queue.value = currentQueue
+        }
+    }
+
+    /**
+     * Charge un album complet dans la file d'attente
+     */
+    fun loadAlbum(albumTitle: String) {
+        viewModelScope.launch {
+            getTracks().firstOrNull()?.let { allTracks ->
+                val albumTracks = allTracks.filter { it.album == albumTitle }
+                    .sortedBy { it.title }
+
+                if (albumTracks.isNotEmpty()) {
+                    // Convertir en Track Entity
+                    val entityTracks = albumTracks.map { track ->
+                        Track(
+                            id = track.id,
+                            title = track.title,
+                            artist = track.artist,
+                            album = track.album,
+                            duration = track.duration,
+                            dateAdded = track.dateAdded,
+                            path = track.data
+                        )
+                    }
+
+                    _queue.value = entityTracks
+                    _currentQueueIndex.value = 0
+
+                    // Charger aussi dans la playlist normale
+                    playlist = albumTracks
+                    playlistContext = PlaylistContext.Album(albumTitle) // albumTitle est déjà un String
+                    updatePlayerStateFlow()
+                }
+            }
+        }
+    }
+
+    /**
+     * Charge une playlist dans la file d'attente
+     */
+    fun loadPlaylist(tracks: List<DomainTrack>) {
+        if (tracks.isNotEmpty()) {
+            viewModelScope.launch {
+                // Convertir en Track Entity
+                val entityTracks = tracks.map { track ->
+                    Track(
+                        id = track.id,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        duration = track.duration,
+                        dateAdded = track.dateAdded,
+                        path = track.data
+                    )
+                }
+
+                _queue.value = entityTracks
+                _currentQueueIndex.value = 0
+
+                // Charger aussi dans la playlist normale
+                playlist = tracks
+                updatePlayerStateFlow()
+            }
+        }
+    }
+
+    /**
+     * Supprime une chanson de la file d'attente
+     */
+    fun removeFromQueue(index: Int) {
+        val currentQueue = _queue.value.toMutableList()
+        if (index in currentQueue.indices) {
+            currentQueue.removeAt(index)
+            _queue.value = currentQueue
+
+            // Ajuster l'index actuel si nécessaire
+            if (index < _currentQueueIndex.value) {
+                _currentQueueIndex.value = (_currentQueueIndex.value - 1).coerceAtLeast(0)
+            } else if (index == _currentQueueIndex.value && currentQueue.isNotEmpty()) {
+                val newIndex = index.coerceAtMost(currentQueue.size - 1)
+                _currentQueueIndex.value = newIndex
+                _currentTrackFlow.value = currentQueue.getOrNull(newIndex)
+            }
+        }
+    }
+
+    /**
+     * Vide la file d'attente
+     */
+    fun clearQueue() {
+        _queue.value = emptyList()
+        _currentQueueIndex.value = 0
+        _currentTrackFlow.value = null
+        _isPlayingFlow.value = false
+    }
+
+    /**
+     * Passe à la chanson suivante dans la file
+     */
+    fun playNextInQueue() {
+        val queue = _queue.value
+        val currentIndex = _currentQueueIndex.value
+
+        when (_repeatModeFlow.value) {
+            RepeatMode.ONE -> {
+                // Recommencer la même chanson
+                exoPlayer.seekTo(0)
+                exoPlayer.play()
+            }
+            RepeatMode.ALL -> {
+                val nextIndex = if (currentIndex + 1 < queue.size) {
+                    currentIndex + 1
+                } else {
+                    0 // Recommencer au début
+                }
+                _currentQueueIndex.value = nextIndex
+                queue.getOrNull(nextIndex)?.let { track ->
+                    load(track.id, autoPlay = true)
+                }
+            }
+            RepeatMode.OFF -> {
+                if (currentIndex + 1 < queue.size) {
+                    _currentQueueIndex.value = currentIndex + 1
+                    queue[currentIndex + 1].let { track ->
+                        load(track.id, autoPlay = true)
+                    }
+                } else {
+                    // Fin de la file
+                    exoPlayer.pause()
+                    _isPlayingFlow.value = false
+                }
+            }
+        }
+    }
+
+    /**
+     * Revient à la chanson précédente dans la file
+     */
+    fun playPreviousInQueue() {
+        val currentIndex = _currentQueueIndex.value
+        val queue = _queue.value
+
+        if (currentIndex > 0) {
+            _currentQueueIndex.value = currentIndex - 1
+            queue[currentIndex - 1].let { track ->
+                load(track.id, autoPlay = true)
+            }
+        } else if (_repeatModeFlow.value == RepeatMode.ALL && queue.isNotEmpty()) {
+            val lastIndex = queue.size - 1
+            _currentQueueIndex.value = lastIndex
+            queue[lastIndex].let { track ->
+                load(track.id, autoPlay = true)
+            }
+        }
+    }
+
+    /**
+     * Réorganise la file d'attente
+     */
+    fun reorderQueue(fromIndex: Int, toIndex: Int) {
+        val currentQueue = _queue.value.toMutableList()
+
+        if (fromIndex in currentQueue.indices && toIndex in currentQueue.indices) {
+            val item = currentQueue.removeAt(fromIndex)
+            currentQueue.add(toIndex, item)
+            _queue.value = currentQueue
+
+            // Ajuster l'index actuel
+            when {
+                fromIndex == _currentQueueIndex.value -> {
+                    _currentQueueIndex.value = toIndex
+                }
+                fromIndex < _currentQueueIndex.value && toIndex >= _currentQueueIndex.value -> {
+                    _currentQueueIndex.value = _currentQueueIndex.value - 1
+                }
+                fromIndex > _currentQueueIndex.value && toIndex <= _currentQueueIndex.value -> {
+                    _currentQueueIndex.value = _currentQueueIndex.value + 1
+                }
+            }
+        }
+    }
+
+    /**
+     * Active/désactive le mode aléatoire pour la file d'attente
+     */
+    fun toggleShuffleQueue() {
+        val currentlyShuffling = _isShuffleEnabled.value
+
+        if (!currentlyShuffling) {
+            // Activer le shuffle
+            originalQueue = _queue.value
+            val currentTrack = _queue.value.getOrNull(_currentQueueIndex.value)
+
+            val shuffled = _queue.value.toMutableList()
+            shuffled.shuffle()
+
+            // S'assurer que la chanson actuelle reste en première position
+            currentTrack?.let { track ->
+                shuffled.removeAll { it.id == track.id }
+                shuffled.add(0, track)
+            }
+
+            _queue.value = shuffled
+            _currentQueueIndex.value = 0
+        } else {
+            // Désactiver le shuffle
+            _queue.value = originalQueue
+            val currentTrack = _currentTrackFlow.value
+            currentTrack?.let { track ->
+                val newIndex = originalQueue.indexOfFirst { it.id == track.id }
+                if (newIndex != -1) {
+                    _currentQueueIndex.value = newIndex
+                }
+            }
+        }
+
+        _isShuffleEnabled.value = !currentlyShuffling
+    }
+
+    /**
+     * Change le mode de répétition (OFF -> ALL -> ONE -> OFF)
+     */
+    fun cycleRepeatMode() {
+        _repeatModeFlow.value = when (_repeatModeFlow.value) {
+            RepeatMode.OFF -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.OFF
+        }
+
+        // Mettre à jour aussi l'ancien repeatMode pour compatibilité
+        repeatMode = _repeatModeFlow.value
+
+        exoPlayer.repeatMode = when (_repeatModeFlow.value) {
+            RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+            RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+            RepeatMode.ONE -> Player.REPEAT_MODE_ONE
+        }
+    }
+
+    /**
+     * Aller à un index spécifique de la file
+     */
+    fun playAtIndex(index: Int) {
+        if (index in _queue.value.indices) {
+            _currentQueueIndex.value = index
+            _queue.value[index].let { track ->
+                load(track.id, autoPlay = true)
+            }
+        }
+    }
+
+    // ============================================
+    // MÉTHODES UTILITAIRES FILE D'ATTENTE
+    // ============================================
+
+    /**
+     * Obtient la chanson suivante sans la jouer
+     */
+    fun getNextTrack(): Track? {
+        val queue = _queue.value
+        val currentIndex = _currentQueueIndex.value
+
+        return when {
+            _repeatModeFlow.value == RepeatMode.ONE -> _currentTrackFlow.value
+            currentIndex + 1 < queue.size -> queue[currentIndex + 1]
+            _repeatModeFlow.value == RepeatMode.ALL -> queue.firstOrNull()
+            else -> null
+        }
+    }
+
+    /**
+     * Obtient la chanson précédente sans la jouer
+     */
+    fun getPreviousTrack(): Track? {
+        val currentIndex = _currentQueueIndex.value
+        val queue = _queue.value
+        return when {
+            currentIndex > 0 -> queue[currentIndex - 1]
+            _repeatModeFlow.value == RepeatMode.ALL -> queue.lastOrNull()
+            else -> null
+        }
+    }
+
+    /**
+     * Vérifie s'il y a une chanson suivante
+     */
+    fun hasNext(): Boolean {
+        return when {
+            _repeatModeFlow.value != RepeatMode.OFF -> true
+            else -> _currentQueueIndex.value + 1 < _queue.value.size
+        }
+    }
+
+    /**
+     * Vérifie s'il y a une chanson précédente
+     */
+    fun hasPrevious(): Boolean {
+        return when {
+            _repeatModeFlow.value == RepeatMode.ALL -> true
+            else -> _currentQueueIndex.value > 0
+        }
+    }
+
+    // ============================================
+    // MÉTHODES EXISTANTES (CONSERVÉES)
+    // ============================================
+
     private fun restorePlayerState() {
         viewModelScope.launch {
-            // Récupérer l'état sauvegardé
             val savedState = playerPreferences.playerState.firstOrNull()
                 ?: SavedPlayerState.empty()
 
             if (savedState.trackId > 0) {
                 try {
-                    // Chercher la piste sauvegardée
                     val allTracks = trackRepo.tracks().firstOrNull() ?: emptyList()
                     val track = allTracks.find { it.id == savedState.trackId }
 
                     if (track != null) {
-                        // Restaurer la piste
                         currentTrack = track
 
-                        // Préparer le player
                         val mediaItem = MediaItem.fromUri(track.data)
                         exoPlayer.setMediaItem(mediaItem)
                         exoPlayer.prepare()
 
-                        // Restaurer la position
                         if (savedState.position > 0) {
                             exoPlayer.seekTo(savedState.position)
                         }
 
-                        // Restaurer l'état de lecture
                         isPlaying = savedState.isPlaying
                         if (savedState.isPlaying) {
                             exoPlayer.play()
                         }
 
-                        // Restaurer le contexte de playlist
                         playlistContext = when (savedState.playlistContext) {
                             "album" -> PlaylistContext.Album(savedState.contextId)
                             "artist" -> PlaylistContext.Artist(savedState.contextId)
@@ -139,7 +548,6 @@ class PlayerVM @Inject constructor(
                             else -> PlaylistContext.None
                         }
 
-                        // Mettre à jour le state flow
                         updatePlayerStateFlow()
                     }
                 } catch (e: Exception) {
@@ -194,12 +602,10 @@ class PlayerVM @Inject constructor(
                 playlist = tracks
                 originalPlaylist = tracks
 
-                // Si aucun contexte n'est défini, utiliser AllTracks
                 if (playlistContext == PlaylistContext.None) {
                     playlistContext = PlaylistContext.AllTracks
                 }
 
-                // Mettre à jour le state flow
                 updatePlayerStateFlow()
             }
         }
@@ -207,35 +613,27 @@ class PlayerVM @Inject constructor(
 
     private fun setupPlayerListeners() {
         exoPlayer.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                when (playbackState) {
+            override fun onPlaybackStateChanged(state: Int) {
+                when (state) {
                     Player.STATE_ENDED -> {
-                        when (repeatMode) {
-                            RepeatMode.ONE -> {
-                                exoPlayer.seekTo(0)
-                                exoPlayer.play()
-                            }
-                            else -> nextTrack()
+                        // Chanson terminée, passer à la suivante
+                        if (hasNext()) {
+                            playNextInQueue()
+                        } else {
+                            isPlaying = false
+                            _isPlayingFlow.value = false
                         }
                     }
                     Player.STATE_READY -> {
-                        // État prêt
-                    }
-                    Player.STATE_BUFFERING -> {
-                        // Buffering
-                    }
-                    Player.STATE_IDLE -> {
-                        // Idle
+                        duration = exoPlayer.duration.coerceAtLeast(0)
                     }
                 }
             }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                this@PlayerVM.isPlaying = isPlaying
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+                _isPlayingFlow.value = playing
                 updatePlayerStateFlow()
-                if (isPlaying) {
-                    startWaveformAnalyzer()
-                }
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -245,25 +643,14 @@ class PlayerVM @Inject constructor(
     }
 
     private fun startPlayerUpdates() {
-        updateJob?.cancel()
         updateJob = viewModelScope.launch {
             while (true) {
-                updatePlayerState()
-                delay(80)
+                if (exoPlayer.isPlaying) {
+                    position = exoPlayer.currentPosition.coerceAtLeast(0)
+                    duration = exoPlayer.duration.coerceAtLeast(0)
+                }
+                delay(100)
             }
-        }
-    }
-
-    private fun updatePlayerState() {
-        try {
-            position = exoPlayer.currentPosition.coerceAtLeast(0L)
-            duration = if (exoPlayer.duration > 0) exoPlayer.duration else 1L
-            isPlaying = exoPlayer.isPlaying
-        } catch (e: Exception) {
-            // En cas d'erreur, réinitialiser les valeurs
-            position = 0L
-            duration = 1L
-            isPlaying = false
         }
     }
 
@@ -274,106 +661,54 @@ class PlayerVM @Inject constructor(
             playlist = playlist,
             playlistContext = playlistContext
         )
-
-        // Forcer la mise à jour du UI
         _forceUpdate.value = System.currentTimeMillis()
     }
 
-    private fun startWaveformAnalyzer() {
-        val sessionId = exoPlayer.audioSessionId
-        if (sessionId == C.AUDIO_SESSION_ID_UNSET) return
-
-        if (analyzer == null) {
-            try {
-                analyzer = AudioWaveformAnalyzer(sessionId)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return
-            }
-        }
-
-        try {
-            analyzer?.start { amps ->
-                waveform = downSampleAndSmooth(amps)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun downSampleAndSmooth(src: IntArray): IntArray {
-        val target = 200
-        if (src.isEmpty()) return intArrayOf()
-
-        val step = src.size.toFloat() / target
-        val out = IntArray(target)
-        var pos = 0f
-
-        for (i in 0 until target) {
-            val idx = pos.toInt().coerceIn(0, src.lastIndex)
-            out[i] = src[idx]
-            pos += step
-        }
-
-        for (i in 1 until out.size - 1) {
-            out[i] = ((out[i - 1] + out[i] + out[i + 1]) / 3f).toInt()
-        }
-
-        return out
-    }
-
-    // Fonction principale pour charger une piste - CORRIGÉE
-    fun load(trackId: Long, autoPlay: Boolean = true) {
+    fun load(trackId: Long, autoPlay: Boolean = false) {
         viewModelScope.launch {
             try {
-                // Chercher la piste dans la playlist actuelle d'abord
-                var track = playlist.find { it.id == trackId }
+                val allTracks = trackRepo.tracks().firstOrNull() ?: emptyList()
+                val track = allTracks.find { it.id == trackId }
 
-                // Si pas trouvée, chercher dans le repo
-                if (track == null) {
-                    track = trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
-                }
+                track?.let {
+                    currentTrack = it
 
-                if (track == null) {
-                    throw Exception("Piste non trouvée")
-                }
+                    // Mettre à jour aussi le flow
+                    _currentTrackFlow.value = Track(
+                        id = it.id,
+                        title = it.title,
+                        artist = it.artist,
+                        album = it.album,
+                        duration = it.duration,
+                        dateAdded = it.dateAdded,
+                        path = it.data
+                    )
 
-                // Vérifier si c'est déjà la piste en cours
-                val isSameTrack = currentTrack?.id == trackId
-
-                // Mettre à jour la piste courante
-                currentTrack = track
-
-                if (!isSameTrack || !exoPlayer.isPlaying) {
-                    // Arrêter la lecture si en cours
-                    if (exoPlayer.isPlaying) {
-                        exoPlayer.pause()
-                    }
-
-                    // Préparer la nouvelle piste
-                    val mediaItem = MediaItem.Builder()
-                        .setUri(track.data)
-                        .setMediaId(track.id.toString())
-                        .build()
-
+                    val mediaItem = MediaItem.fromUri(it.data)
                     exoPlayer.setMediaItem(mediaItem)
                     exoPlayer.prepare()
 
                     if (autoPlay) {
                         exoPlayer.play()
+                        isPlaying = true
+                        _isPlayingFlow.value = true
                     }
 
-                    // Générer waveform
-                    waveform = try {
-                        genWaveform(trackId)
-                    } catch (e: Exception) {
-                        createFallbackWaveform()
+                    viewModelScope.launch {
+                        waveform = try {
+                            genWaveform(trackId)
+                        } catch (e: Exception) {
+                            createFallbackWaveform()
+                        }
                     }
+
+                    updatePlayerStateFlow()
+                    savePlayerState()
+                } ?: run {
+                    currentTrack = createFallbackTrack(trackId)
+                    waveform = createFallbackWaveform()
+                    updatePlayerStateFlow()
                 }
-
-                // Mettre à jour le state flow
-                updatePlayerStateFlow()
-
             } catch (e: Exception) {
                 e.printStackTrace()
                 currentTrack = createFallbackTrack(trackId)
@@ -383,127 +718,26 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    // Nouvelle méthode pour charger une piste directement (sans delay)
-    fun loadTrackDirectly(track: DomainTrack, autoPlay: Boolean = true) {
-        viewModelScope.launch {
-            try {
-                // Vérifier si c'est déjà la piste en cours
-                val isSameTrack = currentTrack?.id == track.id
+    fun loadWithPlaylist(trackId: Long, newPlaylist: List<DomainTrack>, context: PlaylistContext, autoPlay: Boolean = false) {
+        playlist = newPlaylist
+        originalPlaylist = newPlaylist
+        playlistContext = context
+        updatePlayerStateFlow()
+        load(trackId, autoPlay)
+    }
 
-                // Mettre à jour la piste courante
-                currentTrack = track
-
-                if (!isSameTrack || !exoPlayer.isPlaying) {
-                    // Arrêter la lecture si en cours
-                    if (exoPlayer.isPlaying) {
-                        exoPlayer.pause()
-                    }
-
-                    val mediaItem = MediaItem.Builder()
-                        .setUri(track.data)
-                        .setMediaId(track.id.toString())
-                        .build()
-
-                    exoPlayer.setMediaItem(mediaItem)
-                    exoPlayer.prepare()
-
-                    if (autoPlay) {
-                        exoPlayer.play()
-                    }
-
-                    // Générer waveform
-                    waveform = try {
-                        genWaveform(track.id)
-                    } catch (e: Exception) {
-                        createFallbackWaveform()
-                    }
-                }
-
-                // Mettre à jour le state flow
-                updatePlayerStateFlow()
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                currentTrack = createFallbackTrack(track.id)
-                waveform = createFallbackWaveform()
-                updatePlayerStateFlow()
-            }
+    fun loadAlbumTracks(albumId: String): List<DomainTrack> {
+        return playlist.filter {
+            it.album.equals(albumId, ignoreCase = true)
         }
     }
 
-    fun loadAlbum(albumTitle: String) {
-        viewModelScope.launch {
-            try {
-                val albumTracks = getAlbumTracks(albumTitle)
-                if (albumTracks.isNotEmpty()) {
-                    // Mettre à jour la playlist avec les pistes de l'album
-                    playlist = albumTracks
-                    originalPlaylist = albumTracks
-                    playlistContext = PlaylistContext.Album(albumTitle)
-
-                    // Mettre à jour le state flow
-                    updatePlayerStateFlow()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    fun loadArtist(artistName: String) {
-        viewModelScope.launch {
-            try {
-                val artistTracks = getArtistTracks(artistName)
-                if (artistTracks.isNotEmpty()) {
-                    // Mettre à jour la playlist avec les pistes de l'artiste
-                    playlist = artistTracks
-                    originalPlaylist = artistTracks
-                    playlistContext = PlaylistContext.Artist(artistName)
-
-                    // Mettre à jour le state flow
-                    updatePlayerStateFlow()
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    // Fonction pour charger un album à partir d'une piste
-    fun playAlbumFromTrack(trackId: Long) {
-        viewModelScope.launch {
-            val track = playlist.find { it.id == trackId }
-                ?: trackRepo.tracks().firstOrNull()?.find { it.id == trackId }
-
-            track?.let { currentTrack ->
-                val albumTracks = getAlbumTracks(currentTrack.album)
-                if (albumTracks.isNotEmpty()) {
-                    playlist = albumTracks
-                    originalPlaylist = albumTracks
-                    playlistContext = PlaylistContext.Album(currentTrack.album)
-
-                    // Charger la piste avec la nouvelle playlist
-                    loadTrackDirectly(currentTrack)
-                }
-            }
-        }
-    }
-
-    // Récupérer les pistes d'un album
-    private suspend fun getAlbumTracks(albumTitle: String): List<DomainTrack> {
-        return trackRepo.tracks().firstOrNull()?.filter { track ->
-            track.album.equals(albumTitle, ignoreCase = true)
+    fun loadArtistTracks(artistName: String): List<DomainTrack> {
+        return playlist.filter {
+            it.artist.equals(artistName, ignoreCase = true)
         } ?: emptyList()
     }
 
-    // Récupérer les pistes d'un artiste
-    private suspend fun getArtistTracks(artistName: String): List<DomainTrack> {
-        return trackRepo.tracks().firstOrNull()?.filter { track ->
-            track.artist.equals(artistName, ignoreCase = true)
-        } ?: emptyList()
-    }
-
-    // Méthodes utilitaires
     fun getAlbumFromCurrentTrack(): String? {
         return currentTrack?.album
     }
@@ -520,13 +754,11 @@ class PlayerVM @Inject constructor(
         return playlistContext is PlaylistContext.Artist
     }
 
-    // Méthode pour forcer la mise à jour de la piste actuelle
     fun updateCurrentTrack(track: DomainTrack) {
         currentTrack = track
         updatePlayerStateFlow()
     }
 
-    // Contrôles de lecture
     fun nextTrack() {
         if (playlist.isEmpty()) return
         currentTrack?.let { current ->
@@ -560,6 +792,7 @@ class PlayerVM @Inject constructor(
             exoPlayer.play()
         }
         isPlaying = exoPlayer.isPlaying
+        _isPlayingFlow.value = exoPlayer.isPlaying
         updatePlayerStateFlow()
     }
 
@@ -591,6 +824,9 @@ class PlayerVM @Inject constructor(
             RepeatMode.ONE -> RepeatMode.OFF
         }
 
+        // Synchroniser avec le nouveau flow
+        _repeatModeFlow.value = repeatMode
+
         exoPlayer.repeatMode = when (repeatMode) {
             RepeatMode.OFF -> Player.REPEAT_MODE_OFF
             RepeatMode.ALL -> Player.REPEAT_MODE_ALL
@@ -602,7 +838,6 @@ class PlayerVM @Inject constructor(
         exoPlayer.seekTo(ms)
     }
 
-    // Méthodes pour partager et favoris
     fun shareTrack() {
         viewModelScope.launch {
             currentTrack?.let { track ->
@@ -627,7 +862,6 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    // Rafraîchir la bibliothèque
     fun refreshLibrary() {
         viewModelScope.launch {
             try {
@@ -644,7 +878,6 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    // Recherche
     fun searchTracks(query: String) {
         viewModelScope.launch {
             if (query.isBlank()) {
@@ -676,7 +909,6 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    // Informations sur la playlist
     fun getCurrentPlaylistInfo(): String {
         return when (val context = playlistContext) {
             is PlaylistContext.Album -> "Album: ${context.albumId}"
@@ -691,7 +923,6 @@ class PlayerVM @Inject constructor(
         return playlist.size
     }
 
-    // Sauvegarde et nettoyage
     override fun onCleared() {
         super.onCleared()
         savePlayerState()
@@ -705,7 +936,6 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    // Waveform par défaut
     private fun createFallbackWaveform(): IntArray {
         val barCount = 200
         return IntArray(barCount) { index ->
@@ -719,7 +949,6 @@ class PlayerVM @Inject constructor(
         }
     }
 
-    // Piste par défaut
     private fun createFallbackTrack(trackId: Long): DomainTrack {
         return DomainTrack(
             id = trackId,
@@ -732,12 +961,10 @@ class PlayerVM @Inject constructor(
         )
     }
 
-    // Enum pour le mode répétition
     enum class RepeatMode {
         OFF, ALL, ONE
     }
 
-    // Contextes de playlist
     sealed class PlaylistContext {
         object None : PlaylistContext()
         object AllTracks : PlaylistContext()
@@ -746,6 +973,5 @@ class PlayerVM @Inject constructor(
         data class Search(val query: String) : PlaylistContext()
     }
 
-    // Méthode pour obtenir le flow de force update
     fun getForceUpdateFlow() = _forceUpdate.asStateFlow()
 }

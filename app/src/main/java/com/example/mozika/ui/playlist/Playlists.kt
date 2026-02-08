@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.mozika.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -44,6 +45,7 @@ fun PlaylistsScreen(
 ) {
     val vm: PlaylistVM = hiltViewModel()
     val playlistsWithCount by vm.playlistsWithCount.collectAsState(initial = emptyList())
+    val coroutineScope = rememberCoroutineScope()
 
     var showDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
@@ -495,7 +497,9 @@ fun PlaylistsScreen(
                 Button(
                     onClick = {
                         if (newName.isNotBlank() && newName.length <= 50) {
-                            vm.create(newName)
+                            coroutineScope.launch {
+                                vm.create(newName)
+                            }
                             showDialog = false
                             newName = ""
                         }

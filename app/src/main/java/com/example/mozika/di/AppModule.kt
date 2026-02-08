@@ -11,6 +11,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+import com.example.mozika.domain.usecase.GetTracks
+import com.example.mozika.data.repo.TrackRepo
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -33,5 +35,10 @@ object AppModule {
     fun provideAudioManager(@ApplicationContext context: Context): AudioManager =
         context.getSystemService()!!
 
+    @Provides
+    @Singleton
+    fun provideGetTracks(trackRepo: TrackRepo): GetTracks {
+        return GetTracks(trackRepo)
+    }
 
 }
