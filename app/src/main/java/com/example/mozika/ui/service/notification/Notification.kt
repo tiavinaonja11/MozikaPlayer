@@ -1,6 +1,5 @@
-package com.example.mozika.service.notification
+package com.example.mozika.ui.service.notification
 
-import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle

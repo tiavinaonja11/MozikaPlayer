@@ -1,15 +1,25 @@
 package com.example.mozika.ui.player
 
+import android.content.Context
 import android.media.audiofx.Visualizer
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 
 class AudioWaveformAnalyzer(
-    private val audioSessionId: Int
+    private val context: Context
 ) {
     private var visualizer: Visualizer? = null
+    private var audioSessionId: Int = Visualizer.ERROR_BAD_VALUE
 
-    fun start(onWaveform: (IntArray) -> Unit) {
+    @OptIn(UnstableApi::class)
+    fun start(exoPlayer: ExoPlayer, onWaveform: (IntArray) -> Unit) {
         try {
-            if (audioSessionId == Visualizer.ERROR_BAD_VALUE) return
+            // Récupérer l'audio session ID depuis ExoPlayer
+            audioSessionId = exoPlayer.audioSessionId
+            if (audioSessionId == Visualizer.ERROR_BAD_VALUE || audioSessionId < 0) {
+                return
+            }
 
             stop() // sécurité
 
@@ -23,11 +33,12 @@ class AudioWaveformAnalyzer(
                             waveform: ByteArray?,
                             samplingRate: Int
                         ) {
-                            if (waveform == null) return
-                            val amps = IntArray(waveform.size) { i ->
-                                waveform[i].toInt() and 0xFF
+                            waveform?.let { bytes ->
+                                val amps = IntArray(bytes.size) { i ->
+                                    bytes[i].toInt() and 0xFF
+                                }
+                                onWaveform(amps)
                             }
-                            onWaveform(amps)
                         }
 
                         override fun onFftDataCapture(
@@ -35,7 +46,7 @@ class AudioWaveformAnalyzer(
                             fft: ByteArray?,
                             samplingRate: Int
                         ) {
-                            // optionnel
+                            // Optionnel - non utilisé ici
                         }
                     },
                     Visualizer.getMaxCaptureRate() / 2,
@@ -45,10 +56,14 @@ class AudioWaveformAnalyzer(
                 enabled = true
             }
         } catch (e: Throwable) {
-            // Erreur -3 ou autre : on log et on désactive l’analyse temps réel
+            // Erreur -3 ou autre : on log et on désactive l'analyse temps réel
             e.printStackTrace()
             stop()
         }
+    }
+
+    fun start(exoPlayer: ExoPlayer) {
+        start(exoPlayer) { /* default empty callback */ }
     }
 
     fun stop() {

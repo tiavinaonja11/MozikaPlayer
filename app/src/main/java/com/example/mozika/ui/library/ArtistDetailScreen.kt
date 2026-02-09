@@ -215,9 +215,9 @@ fun ArtistDetailScreen(
                                         val tracks = playerVM.loadArtistTracks(artist.name)
 
                                         // 2. Charger la playlist avec le contexte Artist
-                                        playerVM.loadWithPlaylist(
-                                            trackId = artistTracks.first().id,
+                                        playerVM.loadPlaylistAndPlay(
                                             newPlaylist = tracks,
+                                            trackId = artistTracks.first().id,
                                             context = PlayerVM.PlaylistContext.Artist(artist.name),
                                             autoPlay = true
                                         )
@@ -357,9 +357,9 @@ fun TrackItemArtist(
                 val artistTracks = playerVM.loadArtistTracks(artistName)
 
                 // 2. Charger la playlist avec le contexte Artist
-                playerVM.loadWithPlaylist(
-                    trackId = track.id,
+                playerVM.loadPlaylistAndPlay(
                     newPlaylist = artistTracks,
+                    trackId = track.id,
                     context = PlayerVM.PlaylistContext.Artist(artistName),
                     autoPlay = true
                 )
