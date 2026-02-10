@@ -3,6 +3,7 @@ package com.example.mozika.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -12,6 +13,7 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaNotification
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.example.mozika.MainActivity
 import com.example.mozika.R
 import com.example.mozika.service.notification.CustomNotificationProvider
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,14 +66,28 @@ class PlaybackService : MediaSessionService() {
                     override fun createMediaActionPendingIntent(
                         mediaSession: MediaSession,
                         command: Long
-                    ): android.app.PendingIntent {
-                        val intent = Intent(this@PlaybackService, PlaybackService::class.java)
-                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            android.app.PendingIntent.FLAG_IMMUTABLE
-                        } else {
-                            0
+                    ): PendingIntent {
+                        // ✅ CORRECTION: Utiliser les constantes complètes
+                        val actionString = when (command.toInt()) {
+                            Player.COMMAND_PLAY_PAUSE -> CustomNotificationProvider.ACTION_PLAY_PAUSE
+                            Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> CustomNotificationProvider.ACTION_NEXT
+                            Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> CustomNotificationProvider.ACTION_PREVIOUS
+                            else -> CustomNotificationProvider.ACTION_PLAY_PAUSE
                         }
-                        return android.app.PendingIntent.getService(
+
+                        val intent = Intent(this@PlaybackService, PlaybackService::class.java).apply {
+                            action = actionString
+                        }
+
+                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                        } else {
+                            PendingIntent.FLAG_UPDATE_CURRENT
+                        }
+
+                        println("🔔 DEBUG - Création PendingIntent pour commande: $command -> action: $actionString")
+
+                        return PendingIntent.getService(
                             this@PlaybackService,
                             command.toInt(),
                             intent,
@@ -85,17 +101,33 @@ class PlaybackService : MediaSessionService() {
                         title: CharSequence,
                         command: Int
                     ): NotificationCompat.Action {
-                        val intent = Intent(this@PlaybackService, PlaybackService::class.java)
-                        val pi = android.app.PendingIntent.getService(
+                        // ✅ CORRECTION: Utiliser les constantes complètes
+                        val actionString = when (command) {
+                            Player.COMMAND_PLAY_PAUSE -> CustomNotificationProvider.ACTION_PLAY_PAUSE
+                            Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> CustomNotificationProvider.ACTION_NEXT
+                            Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> CustomNotificationProvider.ACTION_PREVIOUS
+                            else -> CustomNotificationProvider.ACTION_PLAY_PAUSE
+                        }
+
+                        val intent = Intent(this@PlaybackService, PlaybackService::class.java).apply {
+                            action = actionString
+                        }
+
+                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                        } else {
+                            PendingIntent.FLAG_UPDATE_CURRENT
+                        }
+
+                        val pi = PendingIntent.getService(
                             this@PlaybackService,
                             command,
                             intent,
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                android.app.PendingIntent.FLAG_IMMUTABLE
-                            } else {
-                                0
-                            }
+                            flags
                         )
+
+                        println("🔔 DEBUG - Création Action pour commande: $command -> action: $actionString")
+
                         return NotificationCompat.Action.Builder(icon, title, pi).build()
                     }
 
@@ -106,16 +138,20 @@ class PlaybackService : MediaSessionService() {
                         customAction: String,
                         extras: android.os.Bundle
                     ): NotificationCompat.Action {
-                        val intent = Intent(this@PlaybackService, PlaybackService::class.java)
-                        val pi = android.app.PendingIntent.getService(
+                        val intent = Intent(this@PlaybackService, PlaybackService::class.java).apply {
+                            action = customAction
+                            putExtras(extras)
+                        }
+                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                        } else {
+                            PendingIntent.FLAG_UPDATE_CURRENT
+                        }
+                        val pi = PendingIntent.getService(
                             this@PlaybackService,
-                            0,
+                            customAction.hashCode(),
                             intent,
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                android.app.PendingIntent.FLAG_IMMUTABLE
-                            } else {
-                                0
-                            }
+                            flags
                         )
                         return NotificationCompat.Action.Builder(icon, title, pi).build()
                     }
@@ -124,16 +160,19 @@ class PlaybackService : MediaSessionService() {
                         mediaSession: MediaSession,
                         customCommandButton: CommandButton
                     ): NotificationCompat.Action {
-                        val intent = Intent(this@PlaybackService, PlaybackService::class.java)
-                        val pi = android.app.PendingIntent.getService(
+                        val intent = Intent(this@PlaybackService, PlaybackService::class.java).apply {
+                            action = customCommandButton.sessionCommand?.customAction ?: "UNKNOWN"
+                        }
+                        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                        } else {
+                            PendingIntent.FLAG_UPDATE_CURRENT
+                        }
+                        val pi = PendingIntent.getService(
                             this@PlaybackService,
                             0,
                             intent,
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                android.app.PendingIntent.FLAG_IMMUTABLE
-                            } else {
-                                0
-                            }
+                            flags
                         )
                         return NotificationCompat.Action.Builder(
                             customCommandButton.iconResId,
@@ -162,6 +201,17 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         println("DEBUG - PlaybackService.onCreate()")
 
+        // ✅ CORRECTION: Ajouter le PendingIntent pour ouvrir l'app quand on clique sur la notification
+        val sessionActivityPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+        mediaSession.setSessionActivity(sessionActivityPendingIntent)
+
         // Créer le canal de notification
         createNotificationChannel()
 
@@ -184,6 +234,46 @@ class PlaybackService : MediaSessionService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession {
         println("DEBUG - PlaybackService.onGetSession()")
         return mediaSession
+    }
+
+    @UnstableApi
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // ✅ CORRECTION: Log pour debug
+        println("🔔 DEBUG - onStartCommand appelé avec action: ${intent?.action}")
+
+        // ✅ CORRECTION: Utiliser les constantes complètes de CustomNotificationProvider
+        intent?.action?.let { action ->
+            println("🔔 DEBUG - Traitement de l'action: $action")
+
+            when (action) {
+                CustomNotificationProvider.ACTION_NEXT -> {
+                    println("✅ DEBUG - ACTION_NEXT exécuté")
+                    if (mediaSession.player.hasNextMediaItem()) {
+                        mediaSession.player.seekToNextMediaItem()
+                        mediaSession.player.play()
+                    }
+                }
+                CustomNotificationProvider.ACTION_PREVIOUS -> {
+                    println("✅ DEBUG - ACTION_PREVIOUS exécuté")
+                    if (mediaSession.player.hasPreviousMediaItem()) {
+                        mediaSession.player.seekToPreviousMediaItem()
+                        mediaSession.player.play()
+                    }
+                }
+                CustomNotificationProvider.ACTION_PLAY_PAUSE -> {
+                    println("✅ DEBUG - ACTION_PLAY_PAUSE exécuté")
+                    if (mediaSession.player.isPlaying) {
+                        mediaSession.player.pause()
+                    } else {
+                        mediaSession.player.play()
+                    }
+                }
+                else -> {
+                    println("⚠️ DEBUG - Action non reconnue: $action")
+                }
+            }
+        }
+        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {

@@ -28,6 +28,7 @@ import com.example.mozika.domain.usecase.GetTracks
 import com.example.mozika.service.PlaybackService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,9 +36,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import com.example.mozika.domain.model.Track as DomainTrack
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(UnstableApi::class)
 @HiltViewModel
 class PlayerVM @Inject constructor(
@@ -69,8 +72,8 @@ class PlayerVM @Inject constructor(
     /**
      * Chanson actuellement en lecture (StateFlow)
      */
-    private val _currentTrackFlow = MutableStateFlow<Track?>(null)
-    val currentTrackFlow: StateFlow<Track?> = _currentTrackFlow.asStateFlow()
+    private val _currentTrackFlow = MutableStateFlow<DomainTrack?>(null)
+    val currentTrackFlow: StateFlow<DomainTrack?> = _currentTrackFlow.asStateFlow()
 
     /**
      * État de lecture (StateFlow)
@@ -164,58 +167,51 @@ class PlayerVM @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun load(trackId: Long, autoPlay: Boolean = true) {
-        viewModelScope.launch {
-            val track = playlist.find { it.id == trackId } ?: return@launch
-            currentTrack = track
-
-            println("✅ DEBUG - Chargement via MediaSession: ${track.title} - ${track.artist}")
-
-            // Créer le MediaItem avec métadonnées complètes
-            val mediaItem = createMediaItemWithCompleteMetadata(track)
-
-            // Configuration du MediaSession player
-            mediaSession.player.setMediaItem(mediaItem)
-            mediaSession.player.prepare()
-
-            // ✅ CORRECTION : Forcer la notification immédiatement
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Accéder au PlaybackService via contexte
-                val serviceIntent = Intent(context, PlaybackService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(serviceIntent)
-                } else {
-                    context.startService(serviceIntent)
+                // 1. On cherche l'index dans la playlist (qui contient des DomainTrack)
+                val trackIndex = playlist.indexOfFirst { it.id == trackId }
+                if (trackIndex == -1) return@launch
+
+                // 2. ✅ CORRECTION: Préparation des MediaItems avec métadonnées COMPLÈTES
+                val mediaItems = playlist.map { track ->
+                    createMediaItemWithCompleteMetadata(track)  // ✅ Utiliser cette méthode au lieu de builder simple
                 }
-                println("🔔 DEBUG - Service notifié pour la notification")
+
+                withContext(Dispatchers.Main) {
+                    // 3. Charger la liste complète dans le player (active les boutons Suivant/Précédent)
+                    mediaSession.player.setMediaItems(mediaItems)
+                    mediaSession.player.seekTo(trackIndex, 0L)
+                    mediaSession.player.prepare()
+
+                    if (autoPlay) mediaSession.player.play()
+
+                    // 4. RÉSOLUTION DES ERREURS DE TYPE
+                    val selectedTrack: DomainTrack = playlist[trackIndex]
+
+                    // On assigne le DomainTrack aux deux variables
+                    currentTrack = selectedTrack
+                    _currentTrackFlow.value = selectedTrack
+
+                    // ✅ CORRECTION: Invalider la notification pour forcer la mise à jour
+                    // Note: On ne peut pas appeler directement invalidateNotification() depuis ici
+                    // car c'est dans le Service, mais les métadonnées sont maintenant correctement définies
+                    // et le listener onMediaMetadataChanged dans le Service déclenchera invalidateNotification()
+
+                    // Génération de la waveform
+                    generateWaveformForTrack(selectedTrack.data)
+                }
             } catch (e: Exception) {
-                println("🔔 DEBUG - Erreur notification service: ${e.message}")
+                println("❌ Erreur de chargement : ${e.message}")
             }
-
-            if (autoPlay) {
-                mediaSession.player.play()
-                println("✅ DEBUG - Lecture démarrée via MediaSession")
-            }
-
-            // Mise à jour des StateFlows
-            _currentTrackFlow.value = Track(
-                id = track.id,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                duration = track.duration,
-                dateAdded = track.dateAdded,
-                path = track.data
-            )
-
-            updatePlayerStateFlow()
-
-            // Génération de la waveform
-            generateWaveformForTrack(track.data)
         }
     }
 
     /**
      * ✅ NOUVELLE MÉTHODE: Crée un MediaItem avec métadonnées COMPLÈTES pour les notifications
+     */
+    /**
+     * ✅ Crée un MediaItem avec métadonnées COMPLÈTES pour les notifications
      */
     private fun createMediaItemWithCompleteMetadata(track: DomainTrack): MediaItem {
         val uri = Uri.parse(track.data)
@@ -233,7 +229,7 @@ class PlayerVM @Inject constructor(
             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
             .build()
 
-        println("✅ DEBUG - Métadonnées créées pour notification")
+        println("✅ DEBUG - Métadonnées créées pour: ${track.title} - ${track.artist}")
 
         return MediaItem.Builder()
             .setMediaId(track.id.toString())
@@ -243,7 +239,7 @@ class PlayerVM @Inject constructor(
     }
 
     /**
-     * ✅ AMÉLIORATION: Extraction de pochette avec meilleure gestion d'erreur
+     * ✅ Extraction de pochette avec meilleure gestion d'erreur
      */
     private fun extractAlbumArtWithFallback(path: String): ByteArray {
         return try {
@@ -254,10 +250,10 @@ class PlayerVM @Inject constructor(
             retriever.release()
 
             if (art != null) {
-                println("✅ DEBUG - Pochette extraite avec succès")
+                println("✅ DEBUG - Pochette extraite avec succès pour: $path")
                 art
             } else {
-                println("⚠️ DEBUG - Pas de pochette, utilisation de l'image par défaut")
+                println("⚠️ DEBUG - Pas de pochette dans le fichier, utilisation de l'image par défaut")
                 createDefaultAlbumArt()
             }
         } catch (e: Exception) {
@@ -514,6 +510,7 @@ class PlayerVM @Inject constructor(
     /**
      * Joue une chanson spécifique de la file d'attente
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     fun playFromQueue(index: Int) {
         viewModelScope.launch {
             if (index in _queue.value.indices) {
@@ -592,24 +589,13 @@ class PlayerVM @Inject constructor(
             }
 
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                println("🔄 DEBUG - Transition média détectée via MediaSession, notification mise à jour")
-                // ✅ Mettre à jour le currentTrack quand la transition se produit
-                mediaItem?.let {
-                    val trackId = it.mediaId?.toLongOrNull()
-                    trackId?.let { id ->
-                        playlist.find { track -> track.id == id }?.let { track ->
-                            currentTrack = track
-                            _currentTrackFlow.value = Track(
-                                id = track.id,
-                                title = track.title,
-                                artist = track.artist,
-                                album = track.album,
-                                duration = track.duration,
-                                dateAdded = track.dateAdded,
-                                path = track.data
-                            )
-                            println("🔄 DEBUG - CurrentTrack mis à jour via MediaSession: ${track.title}")
-                        }
+                mediaItem?.let { item ->
+                    val trackId = item.mediaId?.toLongOrNull()
+                    playlist.find { it.id == trackId }?.let { track ->
+                        currentTrack = track
+                        // Mettre à jour l'UI
+                        updatePlayerStateFlow()
+                        println("🔄 Transition vers : ${track.title}")
                     }
                 }
             }
@@ -677,6 +663,7 @@ class PlayerVM @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun restorePlayerState() {
         viewModelScope.launch {
             playerPreferences.playerState.firstOrNull()?.let { state ->
@@ -784,30 +771,19 @@ class PlayerVM @Inject constructor(
     // ============================================
 
     fun nextTrack() {
-        if (playlist.isEmpty()) return
-        currentTrack?.let { current ->
-            val currentIndex = playlist.indexOfFirst { it.id == current.id }
-            if (currentIndex != -1) {
-                val nextIndex = if (currentIndex < playlist.size - 1) currentIndex + 1 else 0
-                load(playlist[nextIndex].id)
-                println("⏭️ DEBUG - Piste suivante via MediaSession")
-            } else {
-                load(playlist[0].id)
-            }
-        } ?: run {
-            load(playlist[0].id)
+        if (mediaSession.player.hasNextMediaItem()) {
+            mediaSession.player.seekToNextMediaItem()
+            println("⏭️ DEBUG - Passage au suivant via index Media3")
+        } else if (playlist.isNotEmpty()) {
+            // Optionnel : Revenir au début si on est à la fin
+            mediaSession.player.seekTo(0, 0L)
         }
     }
 
     fun previousTrack() {
-        if (playlist.isEmpty()) return
-        currentTrack?.let { current ->
-            val currentIndex = playlist.indexOfFirst { it.id == current.id }
-            if (currentIndex != -1) {
-                val prevIndex = if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
-                load(playlist[prevIndex].id)
-                println("⏮️ DEBUG - Piste précédente via MediaSession")
-            }
+        if (mediaSession.player.hasPreviousMediaItem()) {
+            mediaSession.player.seekToPreviousMediaItem()
+            println("⏮️ DEBUG - Passage au précédent via index Media3")
         }
     }
 

@@ -4,6 +4,8 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.core.app.NotificationCompat
@@ -28,6 +30,7 @@ class CustomNotificationProvider(
         const val CHANNEL_ID = "playback"
         const val ACTION_PLAY = "com.example.mozika.ACTION_PLAY"
         const val ACTION_PAUSE = "com.example.mozika.ACTION_PAUSE"
+        const val ACTION_PLAY_PAUSE = "com.example.mozika.ACTION_PLAY_PAUSE"  // ✅ AJOUTÉ
         const val ACTION_PREVIOUS = "com.example.mozika.ACTION_PREVIOUS"
         const val ACTION_NEXT = "com.example.mozika.ACTION_NEXT"
         const val ACTION_STOP = "com.example.mozika.ACTION_STOP"
@@ -108,7 +111,7 @@ class CustomNotificationProvider(
             .setOngoing(player.isPlaying)
             .setStyle(
                 MediaStyleNotificationHelper.MediaStyle(mediaSession)
-                    .setShowActionsInCompactView(0, 1, 2)
+                    .setShowActionsInCompactView(0, 1, 2)  // Afficher Previous, Play/Pause, Next en mode compact
             )
 
         // Ajouter les actions
@@ -173,7 +176,7 @@ class CustomNotificationProvider(
             mediaSession,
             prevIcon,
             "Précédent",
-            Player.COMMAND_SEEK_TO_PREVIOUS
+            Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
         )
         actions.add(prevAction)
         println("🔔 DEBUG - Action Précédent ajoutée")
@@ -200,7 +203,7 @@ class CustomNotificationProvider(
             mediaSession,
             nextIcon,
             "Suivant",
-            Player.COMMAND_SEEK_TO_NEXT
+            Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM
         )
         actions.add(nextAction)
         println("🔔 DEBUG - Action Suivant ajoutée")
@@ -268,6 +271,27 @@ class CustomNotificationProvider(
 
         canvas.drawText("♪", 256f, 300f, paint)
         return bitmap
+    }
+
+    // Ajoutez un bloc try-catch autour de l'extraction de l'image
+    private fun loadArtwork(context: Context, uriString: String?): android.graphics.Bitmap {
+        return try {
+            if (uriString == null) return createDefaultAlbumArt()
+
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(context, Uri.parse(uriString))
+            val art = retriever.embeddedPicture
+            retriever.release()
+
+            if (art != null) {
+                android.graphics.BitmapFactory.decodeByteArray(art, 0, art.size)
+            } else {
+                createDefaultAlbumArt()
+            }
+        } catch (e: Exception) {
+            // Si l'image est illisible, on renvoie une image par défaut au lieu de crasher
+            createDefaultAlbumArt()
+        }
     }
 
     override fun handleCustomCommand(
