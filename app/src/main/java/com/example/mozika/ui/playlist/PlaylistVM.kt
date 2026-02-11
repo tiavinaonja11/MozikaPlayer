@@ -64,8 +64,19 @@ class PlaylistVM @Inject constructor(
      */
     suspend fun create(name: String): Long {
         return if (name.isNotBlank()) {
-            playlistRepo.create(name.trim())
+            try {
+                _isLoading.value = true
+                _errorMessage.value = null
+                val id = playlistRepo.create(name.trim())
+                _isLoading.value = false
+                id
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _errorMessage.value = "Erreur lors de la création: ${e.message}"
+                -1L
+            }
         } else {
+            _errorMessage.value = "Le nom ne peut pas être vide"
             -1L
         }
     }
@@ -76,7 +87,14 @@ class PlaylistVM @Inject constructor(
     fun createPlaylist(name: String) {
         if (name.isNotBlank()) {
             viewModelScope.launch {
-                playlistRepo.create(name.trim())
+                try {
+                    _isLoading.value = true
+                    playlistRepo.create(name.trim())
+                    _isLoading.value = false
+                } catch (e: Exception) {
+                    _isLoading.value = false
+                    _errorMessage.value = "Erreur lors de la création: ${e.message}"
+                }
             }
         }
     }
@@ -86,7 +104,14 @@ class PlaylistVM @Inject constructor(
      */
     fun delete(playlistId: Long) {
         viewModelScope.launch {
-            playlistRepo.delete(playlistId)
+            try {
+                _isLoading.value = true
+                playlistRepo.delete(playlistId)
+                _isLoading.value = false
+            } catch (e: Exception) {
+                _isLoading.value = false
+                _errorMessage.value = "Erreur lors de la suppression: ${e.message}"
+            }
         }
     }
 
@@ -96,7 +121,14 @@ class PlaylistVM @Inject constructor(
     fun rename(playlistId: Long, newName: String) {
         if (newName.isNotBlank()) {
             viewModelScope.launch {
-                playlistRepo.rename(playlistId, newName.trim())
+                try {
+                    _isLoading.value = true
+                    playlistRepo.rename(playlistId, newName.trim())
+                    _isLoading.value = false
+                } catch (e: Exception) {
+                    _isLoading.value = false
+                    _errorMessage.value = "Erreur lors du renommage: ${e.message}"
+                }
             }
         }
     }
@@ -106,7 +138,11 @@ class PlaylistVM @Inject constructor(
      */
     fun addTrackToPlaylist(playlistId: Long, trackId: Long) {
         viewModelScope.launch {
-            playlistRepo.addTrack(playlistId, trackId)
+            try {
+                playlistRepo.addTrack(playlistId, trackId)
+            } catch (e: Exception) {
+                _errorMessage.value = "Erreur lors de l'ajout: ${e.message}"
+            }
         }
     }
 
@@ -115,7 +151,11 @@ class PlaylistVM @Inject constructor(
      */
     fun removeTrackFromPlaylist(playlistId: Long, trackId: Long) {
         viewModelScope.launch {
-            playlistRepo.removeTrack(playlistId, trackId)
+            try {
+                playlistRepo.removeTrack(playlistId, trackId)
+            } catch (e: Exception) {
+                _errorMessage.value = "Erreur lors de la suppression: ${e.message}"
+            }
         }
     }
 
@@ -123,7 +163,11 @@ class PlaylistVM @Inject constructor(
      * Vérifier si une chanson est dans une playlist
      */
     suspend fun isTrackInPlaylist(playlistId: Long, trackId: Long): Boolean {
-        return playlistRepo.isTrackInPlaylist(playlistId, trackId)
+        return try {
+            playlistRepo.isTrackInPlaylist(playlistId, trackId)
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**
@@ -163,7 +207,11 @@ class PlaylistVM @Inject constructor(
      * Obtenir le nombre de chansons d'une playlist
      */
     suspend fun getSongCount(playlistId: Long): Int {
-        return playlistRepo.getSongCount(playlistId)
+        return try {
+            playlistRepo.getSongCount(playlistId)
+        } catch (e: Exception) {
+            0
+        }
     }
 
     // États pour gérer les opérations

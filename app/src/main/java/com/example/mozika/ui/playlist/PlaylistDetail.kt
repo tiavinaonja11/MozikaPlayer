@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import com.example.mozika.ui.player.PlayerVM
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -120,9 +121,10 @@ fun PlaylistDetailScreen(
         },
         floatingActionButton = {
             if (tracks.isNotEmpty()) {
+                val playerVM: PlayerVM = hiltViewModel()
                 ExtendedFloatingActionButton(
                     onClick = {
-                        // Jouer toute la playlist
+                        viewModel.playAll(playerVM)
                     },
                     icon = { Icon(Icons.Default.PlayArrow, "Jouer", modifier = Modifier.size(24.dp)) },
                     text = { Text("Tout jouer", fontWeight = FontWeight.SemiBold) },
@@ -279,10 +281,15 @@ fun PlaylistDetailScreen(
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
                     items(tracks, key = { it.id }) { track ->
+                        val playerVM: PlayerVM = hiltViewModel()
                         PlaylistTrackItem(
                             track = track,
                             position = tracks.indexOf(track) + 1,
-                            onRemove = { showRemoveTrackDialog = track }
+                            onRemove = { showRemoveTrackDialog = track },
+                            onPlay = {
+                                viewModel.playTrack(playerVM, track.id)
+                                navController.navigate("player/${track.id}")
+                            }
                         )
                     }
                 }
@@ -395,14 +402,15 @@ fun PlaylistDetailScreen(
 fun PlaylistTrackItem(
     track: Track,
     position: Int,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onPlay: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable {
-                // TODO: Jouer la piste
+                onPlay()
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(

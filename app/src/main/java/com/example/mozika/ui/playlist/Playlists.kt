@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.mozika.ui.theme.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -438,104 +437,22 @@ fun PlaylistsScreen(
         }
     }
 
-    // Dialog pour créer une playlist
+    // Dialog pour créer une playlist - CORRIGÉ
     if (showDialog) {
-        AlertDialog(
-            onDismissRequest = {
+        CreatePlaylistDialog(
+            onDismiss = {
                 showDialog = false
                 newName = ""
             },
-            title = {
-                Text(
-                    "Nouvelle collection",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        label = { Text("Nom") },
-                        placeholder = { Text("Chill, Workout...") },
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Sentences
-                        ),
-                        isError = newName.length > 50
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            "Collection personnalisée",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "${newName.length}/50",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (newName.length > 50) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newName.isNotBlank() && newName.length <= 50) {
-                            coroutineScope.launch {
-                                vm.create(newName)
-                            }
-                            showDialog = false
-                            newName = ""
-                        }
-                    },
-                    enabled = newName.isNotBlank() && newName.length <= 50,
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("Créer", fontSize = 14.sp)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = {
+            onCreate = { name ->
+                coroutineScope.launch {
+                    val id = vm.create(name)
+                    if (id > 0) {
                         showDialog = false
                         newName = ""
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) {
-                    Text("Annuler", fontSize = 14.sp)
+                    }
                 }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(horizontal = 16.dp)
+            }
         )
     }
 
@@ -554,6 +471,100 @@ fun PlaylistsScreen(
             }
         )
     }
+}
+
+// Dialog de création de playlist séparé pour plus de clarté
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreatePlaylistDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Nouvelle collection",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nom") },
+                    placeholder = { Text("Chill, Workout...") },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences
+                    ),
+                    isError = name.length > 50
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Collection personnalisée",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "${name.length}/50",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (name.length > 50) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onCreate(name) },
+                enabled = name.isNotBlank() && name.length <= 50,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text("Créer", fontSize = 14.sp)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text("Annuler", fontSize = 14.sp)
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.padding(horizontal = 16.dp)
+    )
 }
 
 // COMPOSABLES

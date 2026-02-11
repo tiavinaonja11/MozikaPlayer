@@ -6,6 +6,7 @@ import com.example.mozika.data.repo.PlaylistRepo
 import com.example.mozika.domain.model.Playlist
 import com.example.mozika.domain.model.Track
 import com.example.mozika.domain.usecase.GetTracks
+import com.example.mozika.ui.player.PlayerVM
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -86,6 +87,42 @@ class PlaylistDetailVM @Inject constructor(
                     createdAt = playlist.createdAt
                 )
                 playlistRepo.delete(entity)
+            }
+        }
+    }
+
+    /**
+     * Jouer toute la playlist à partir du début
+     */
+    fun playAll(playerVM: PlayerVM) {
+        viewModelScope.launch {
+            val tracksList = _tracks.value
+            if (tracksList.isNotEmpty()) {
+                playerVM.loadPlaylist(tracksList)
+                playerVM.load(tracksList.first().id, autoPlay = true)
+            }
+        }
+    }
+
+    /**
+     * Jouer une chanson spécifique de la playlist
+     */
+    fun playTrack(playerVM: PlayerVM, trackId: Long) {
+        viewModelScope.launch {
+            playerVM.loadPlaylist(_tracks.value)
+            playerVM.load(trackId, autoPlay = true)
+        }
+    }
+
+    /**
+     * Jouer la playlist à partir d'une position spécifique
+     */
+    fun playFromPosition(playerVM: PlayerVM, position: Int) {
+        viewModelScope.launch {
+            val tracksList = _tracks.value
+            if (position >= 0 && position < tracksList.size) {
+                playerVM.loadPlaylist(tracksList)
+                playerVM.load(tracksList[position].id, autoPlay = true)
             }
         }
     }
