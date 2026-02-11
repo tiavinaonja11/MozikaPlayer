@@ -38,6 +38,7 @@ media3 = "1.5.0"
 
 # UI
 activity = "1.9.3"
+tvMaterial = "1.0.1"
 
 
 [libraries]
@@ -88,6 +89,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
+androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.ref = "tvMaterial" }
 
 # ----------------------------------------------------
 

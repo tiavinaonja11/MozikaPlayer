@@ -35,6 +35,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,7 +54,8 @@ class PlayerVM @Inject constructor(
     private val playerPreferences: PlayerPreferences,
     private val getTracks: GetTracks,
     private val mediaSession: MediaSession,
-    private val playlistRepo: PlaylistRepo
+    private val playlistRepo: PlaylistRepo,
+    private val playerStateManager: PlayerStateManager
 ) : ViewModel() {
 
     // ============================================
@@ -164,11 +166,26 @@ class PlayerVM @Inject constructor(
         restorePlayerState()
         startAutoSave()
         loadAllTracks()
+        syncWithStateManager()
     }
 
-    // ============================================
-    // CORRECTIONS CRITIQUES POUR LES NOTIFICATIONS
-    // ============================================
+    private fun syncWithStateManager() {
+        viewModelScope.launch {
+            // Observer les changements et mettre à jour le global state manager
+            combine(
+                _currentTrackFlow,
+                _isPlayingFlow
+            ) { track, playing ->
+                Pair(track, playing)
+            }.collect { (track, playing) ->
+                playerStateManager.updateState(
+                    trackId = track?.id?.toString(),
+                    playing = playing
+                )
+                println("🎵 DEBUG - StateManager mis à jour: track=${track?.title}, playing=$playing")
+            }
+        }
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun load(trackId: Long, autoPlay: Boolean = true) {
@@ -598,7 +615,7 @@ class PlayerVM @Inject constructor(
                     val trackId = item.mediaId?.toLongOrNull()
                     playlist.find { it.id == trackId }?.let { track ->
                         currentTrack = track
-                        // Mettre à jour l'UI
+                        _currentTrackFlow.value = track
                         updatePlayerStateFlow()
                         println("🔄 Transition vers : ${track.title}")
                     }

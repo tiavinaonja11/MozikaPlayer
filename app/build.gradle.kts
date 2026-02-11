@@ -80,6 +80,7 @@ dependencies {
 
     // Hilt (KAPT)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.tv.material)
     kapt(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 

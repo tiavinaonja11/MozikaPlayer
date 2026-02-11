@@ -1,7 +1,6 @@
 package com.example.mozika.ui.playlist
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,14 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.tv.material3.OutlinedButtonDefaults
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-// ✅ IMPORT DE LA FONCTION DE NAVIGATION SPÉCIALE (AJOUTÉ)
+// Navigation extension (inchangée)
 import com.example.mozika.ui.nav.navigateToSpecialPlaylist
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistsScreen(
     navController: NavHostController
@@ -50,22 +49,14 @@ fun PlaylistsScreen(
     var newName by remember { mutableStateOf("") }
     var showMenuForPlaylist by remember { mutableStateOf<PlaylistWithCount?>(null) }
 
-    // État pour la barre de recherche
     var showSearchBar by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // Filtrer seulement les playlists utilisateur selon la recherche
     val filteredUserPlaylists = remember(playlistsWithCount, searchQuery) {
-        if (searchQuery.isBlank()) {
-            playlistsWithCount
-        } else {
-            playlistsWithCount.filter { playlist ->
-                playlist.name.contains(searchQuery, ignoreCase = true)
-            }
-        }
+        if (searchQuery.isBlank()) playlistsWithCount
+        else playlistsWithCount.filter { it.name.contains(searchQuery, ignoreCase = true) }
     }
 
-    // Collections spéciales (déjà dynamiques)
     val favoriteTracks by vm.favoriteTracks.collectAsState()
     val topPlayedTracks by vm.topPlayedTracks.collectAsState()
     val recentlyPlayedTracks by vm.recentlyPlayedTracks.collectAsState()
@@ -77,7 +68,6 @@ fun PlaylistsScreen(
             songCount = favoriteTracks.size,
             icon = Icons.Filled.Favorite,
             gradientColors = listOf(Color(0xFFFF6B6B), Color(0xFFEE5A52)),
-            iconBackground = Color(0xFFFF6B6B).copy(alpha = 0.2f),
             route = "favorites"
         ),
         SpecialPlaylist(
@@ -86,7 +76,6 @@ fun PlaylistsScreen(
             songCount = topPlayedTracks.size,
             icon = Icons.Filled.TrendingUp,
             gradientColors = listOf(Color(0xFF4ECDC4), Color(0xFF44A08D)),
-            iconBackground = Color(0xFF4ECDC4).copy(alpha = 0.2f),
             route = "most_played"
         ),
         SpecialPlaylist(
@@ -95,7 +84,6 @@ fun PlaylistsScreen(
             songCount = recentlyPlayedTracks.size,
             icon = Icons.Filled.History,
             gradientColors = listOf(Color(0xFF556270), Color(0xFF4ECDC4)),
-            iconBackground = Color(0xFF556270).copy(alpha = 0.2f),
             route = "recently_played"
         ),
         SpecialPlaylist(
@@ -104,7 +92,6 @@ fun PlaylistsScreen(
             songCount = minOf(topPlayedTracks.size, 25),
             icon = Icons.Filled.Star,
             gradientColors = listOf(Color(0xFFC779D0), Color(0xFFFEAC5E)),
-            iconBackground = Color(0xFFC779D0).copy(alpha = 0.2f),
             route = "top_played"
         )
     )
@@ -113,16 +100,17 @@ fun PlaylistsScreen(
     val totalDuration = filteredUserPlaylists.sumOf { it.songCount * 180 }
 
     Scaffold(
+        modifier = Modifier.background(Color(0xFF121212)), // Fond global
         topBar = {
             if (showSearchBar) {
-                // Barre de recherche complète
+                // Barre de recherche
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .background(MaterialTheme.colorScheme.background),
-                    color = MaterialTheme.colorScheme.background,
-                    tonalElevation = 3.dp
+                        .background(Color(0xFF121212)),
+                    color = Color(0xFF121212),
+                    tonalElevation = 0.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -131,7 +119,6 @@ fun PlaylistsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Bouton retour
                         IconButton(
                             onClick = {
                                 showSearchBar = false
@@ -142,11 +129,10 @@ fun PlaylistsScreen(
                             Icon(
                                 Icons.Default.ArrowBack,
                                 contentDescription = "Retour",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = Color.White
                             )
                         }
 
-                        // Champ de recherche
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
@@ -156,34 +142,35 @@ fun PlaylistsScreen(
                             placeholder = {
                                 Text(
                                     "Rechercher une playlist...",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    color = Color(0xFFB3B3B3)
                                 )
                             },
                             leadingIcon = {
                                 Icon(
                                     Icons.Default.Search,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = Color.White
                                 )
                             },
                             trailingIcon = {
                                 if (searchQuery.isNotBlank()) {
-                                    IconButton(
-                                        onClick = { searchQuery = "" }
-                                    ) {
+                                    IconButton(onClick = { searchQuery = "" }) {
                                         Icon(
                                             Icons.Default.Close,
                                             contentDescription = "Effacer",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            tint = Color.White
                                         )
                                     }
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                                focusedBorderColor = Color(0xFF1DB954),
+                                unfocusedBorderColor = Color(0xFF404040),
+                                focusedContainerColor = Color(0xFF1E1E1E),
+                                unfocusedContainerColor = Color(0xFF1E1E1E),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                cursorColor = Color(0xFF1DB954)
                             ),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
@@ -191,27 +178,25 @@ fun PlaylistsScreen(
                     }
                 }
             } else {
-                // TopAppBar normal
+                // TopAppBar normale
                 TopAppBar(
                     title = {
-                        Column(
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        ) {
+                        Column(modifier = Modifier.padding(bottom = 4.dp)) {
                             Text(
                                 "Mes Playlists",
                                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground,
+                                color = Color.White
                             )
                             Text(
                                 "${filteredUserPlaylists.size} collections • ${formatTotalDuration(totalDuration)}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFFB3B3B3)
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
+                        containerColor = Color(0xFF121212)
                     ),
                     modifier = Modifier.height(70.dp),
                     actions = {
@@ -219,25 +204,18 @@ fun PlaylistsScreen(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Bouton de recherche
-                            IconButton(
-                                onClick = { showSearchBar = true }
-                            ) {
+                            IconButton(onClick = { showSearchBar = true }) {
                                 Icon(
                                     Icons.Default.Search,
                                     contentDescription = "Rechercher",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = Color.White
                                 )
                             }
-
-                            // Bouton ajouter playlist
-                            IconButton(
-                                onClick = { showDialog = true }
-                            ) {
+                            IconButton(onClick = { showDialog = true }) {
                                 Icon(
                                     Icons.Default.Add,
                                     contentDescription = "Ajouter une playlist",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    tint = Color.White
                                 )
                             }
                         }
@@ -249,8 +227,8 @@ fun PlaylistsScreen(
             if (!showSearchBar) {
                 FloatingActionButton(
                     onClick = { showDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = Color(0xFF1DB954),
+                    contentColor = Color.White,
                     shape = CircleShape,
                     modifier = Modifier.size(48.dp)
                 ) {
@@ -263,10 +241,10 @@ fun PlaylistsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background),
+                .background(Color(0xFF121212)),
             contentPadding = PaddingValues(bottom = 80.dp)
         ) {
-            // Statistiques - TOUJOURS VISIBLES
+            // Statistiques
             item {
                 Row(
                     modifier = Modifier
@@ -277,27 +255,22 @@ fun PlaylistsScreen(
                     StatCard(
                         value = filteredUserPlaylists.size.toString(),
                         label = "Playlists",
-                        icon = Icons.Outlined.PlaylistPlay,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                        icon = Icons.Outlined.PlaylistPlay
                     )
-
                     StatCard(
                         value = totalSongs.toString(),
                         label = "Titres",
-                        icon = Icons.Outlined.MusicNote,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                        icon = Icons.Outlined.MusicNote
                     )
-
                     StatCard(
                         value = formatTotalDurationShort(totalDuration),
                         label = "Durée",
-                        icon = Icons.Outlined.Schedule,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                        icon = Icons.Outlined.Schedule
                     )
                 }
             }
 
-            // Collections spéciales - TOUJOURS VISIBLES
+            // Collections spéciales
             item {
                 Row(
                     modifier = Modifier
@@ -310,13 +283,12 @@ fun PlaylistsScreen(
                         text = "Collections spéciales",
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = Color.White
                     )
-
                     Text(
                         text = "${specialPlaylists.size}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = Color(0xFF1DB954),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -334,7 +306,6 @@ fun PlaylistsScreen(
                         SpecialPlaylistCard(
                             playlist = specialPlaylist,
                             onClick = {
-                                // ✅ CORRECTION : utilisation de la fonction d'extension
                                 navController.navigateToSpecialPlaylist(specialPlaylist.route)
                             }
                         )
@@ -342,7 +313,7 @@ fun PlaylistsScreen(
                 }
             }
 
-            // Vos collections - visible toujours
+            // Vos collections
             item {
                 Row(
                     modifier = Modifier
@@ -359,13 +330,12 @@ fun PlaylistsScreen(
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = Color.White
                     )
-
                     if (filteredUserPlaylists.isNotEmpty()) {
                         Badge(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                            contentColor = MaterialTheme.colorScheme.primary
+                            containerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
+                            contentColor = Color(0xFF1DB954)
                         ) {
                             Text(
                                 text = "${filteredUserPlaylists.size}",
@@ -377,11 +347,10 @@ fun PlaylistsScreen(
                 }
             }
 
-            // Liste des playlists utilisateur
+            // Liste des playlists
             if (filteredUserPlaylists.isEmpty()) {
                 item {
                     if (showSearchBar && searchQuery.isNotBlank()) {
-                        // Vue pour résultats de recherche vides
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -393,57 +362,45 @@ fun PlaylistsScreen(
                                 Icons.Outlined.SearchOff,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                tint = Color(0xFF808080)
                             )
-
                             Spacer(modifier = Modifier.height(16.dp))
-
                             Text(
                                 text = "Aucun résultat",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground
+                                color = Color.White
                             )
-
                             Spacer(modifier = Modifier.height(8.dp))
-
                             Text(
                                 text = "Aucune playlist ne correspond à \"$searchQuery\"",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color(0xFFB3B3B3)
                             )
                         }
                     } else {
-                        EmptyPlaylistsView(
-                            onCreateNewClick = { showDialog = true }
-                        )
+                        EmptyPlaylistsView(onCreateNewClick = { showDialog = true })
                     }
                 }
             } else {
                 items(
                     items = filteredUserPlaylists,
-                    key = { playlist: PlaylistWithCount -> playlist.id }
-                ) { playlist: PlaylistWithCount ->
+                    key = { it.id }
+                ) { playlist ->
                     UserPlaylistItem(
                         playlist = playlist,
-                        onClick = {
-                            navController.navigate("playlistDetail/${playlist.id}")
-                        },
-                        onOptionsClick = {
-                            showMenuForPlaylist = playlist
-                        }
+                        onClick = { navController.navigate("playlistDetail/${playlist.id}") },
+                        onOptionsClick = { showMenuForPlaylist = playlist }
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
             }
 
-            item {
-                Spacer(modifier = Modifier.height(60.dp))
-            }
+            item { Spacer(modifier = Modifier.height(60.dp)) }
         }
     }
 
-    // Dialog pour créer une playlist - CORRIGÉ
+    // Dialogue de création
     if (showDialog) {
         CreatePlaylistDialog(
             onDismiss = {
@@ -462,7 +419,7 @@ fun PlaylistsScreen(
         )
     }
 
-    // Menu contextuel pour les playlists
+    // Menu contextuel
     showMenuForPlaylist?.let { playlist ->
         PlaylistOptionsMenu(
             playlist = playlist,
@@ -472,15 +429,15 @@ fun PlaylistsScreen(
                 showMenuForPlaylist = null
             },
             onRename = {
-                // TODO: Implémenter le renommage
+                // TODO: renommage
                 showMenuForPlaylist = null
             }
         )
     }
 }
 
-// Dialog de création de playlist séparé pour plus de clarté
-@OptIn(ExperimentalMaterial3Api::class)
+// ==================== COMPOSANTS ====================
+
 @Composable
 fun CreatePlaylistDialog(
     onDismiss: () -> Unit,
@@ -495,7 +452,7 @@ fun CreatePlaylistDialog(
                 "Nouvelle collection",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = Color.White
             )
         },
         text = {
@@ -503,23 +460,24 @@ fun CreatePlaylistDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nom") },
-                    placeholder = { Text("Chill, Workout...") },
+                    label = { Text("Nom", color = Color(0xFFB3B3B3)) },
+                    placeholder = { Text("Chill, Workout...", color = Color(0xFF808080)) },
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        focusedBorderColor = Color(0xFF1DB954),
+                        unfocusedBorderColor = Color(0xFF404040),
+                        focusedContainerColor = Color(0xFF1E1E1E),
+                        unfocusedContainerColor = Color(0xFF1E1E1E),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFF1DB954)
                     ),
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences
-                    ),
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                     isError = name.length > 50
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -527,13 +485,12 @@ fun CreatePlaylistDialog(
                     Text(
                         "Collection personnalisée",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color(0xFFB3B3B3)
                     )
                     Text(
                         "${name.length}/50",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (name.length > 50) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (name.length > 50) Color(0xFFCF6679) else Color(0xFFB3B3B3)
                     )
                 }
             }
@@ -547,10 +504,10 @@ fun CreatePlaylistDialog(
                     .fillMaxWidth()
                     .height(40.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = Color(0xFF1DB954)
                 )
             ) {
-                Text("Créer", fontSize = 14.sp)
+                Text("Créer", fontSize = 14.sp, color = Color.White)
             }
         },
         dismissButton = {
@@ -560,20 +517,21 @@ fun CreatePlaylistDialog(
                     .fillMaxWidth()
                     .height(40.dp),
                 shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, Color(0xFF404040)),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    contentColor = Color.White
                 )
             ) {
                 Text("Annuler", fontSize = 14.sp)
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color(0xFF1E1E1E),
+        titleContentColor = Color.White,
+        textContentColor = Color.White,
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.padding(horizontal = 16.dp)
     )
 }
-
-// COMPOSABLES
 
 @Composable
 fun SpecialPlaylistCard(
@@ -585,26 +543,18 @@ fun SpecialPlaylistCard(
             .width(110.dp)
             .height(120.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent,
-        ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(playlist.gradientColors),
+                    shape = RoundedCornerShape(16.dp)
+                )
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = playlist.gradientColors
-                        ),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -625,7 +575,6 @@ fun SpecialPlaylistCard(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-
                 Column {
                     Text(
                         text = playlist.title,
@@ -635,7 +584,6 @@ fun SpecialPlaylistCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
                     Text(
                         text = "${playlist.songCount} titres",
                         style = MaterialTheme.typography.labelSmall,
@@ -657,15 +605,10 @@ fun UserPlaylistItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp)
-            .clickable(onClick = onClick)
-            .shadow(
-                elevation = 1.dp,
-                shape = RoundedCornerShape(12.dp),
-                clip = false
-            ),
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = Color(0xFF1E1E1E)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -673,51 +616,38 @@ fun UserPlaylistItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon avec dégradé amélioré
+            // Vignette avec la première lettre
             Box(
                 modifier = Modifier
                     .size(46.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.secondary
-                            )
-                        )
-                    )
-                    .shadow(
-                        elevation = 3.dp,
-                        shape = RoundedCornerShape(10.dp),
-                        clip = true
-                    ),
+                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Outlined.Collections,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                Text(
+                    text = playlist.name.take(1).uppercase(),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1DB954)
+                    )
                 )
             }
 
-            // Info playlist
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = playlist.name,
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
+                Spacer(modifier = Modifier.height(3.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -730,16 +660,15 @@ fun UserPlaylistItem(
                             Icons.Outlined.MusicNote,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            tint = Color(0xFF1DB954).copy(alpha = 0.8f)
                         )
                         Text(
                             text = "${playlist.songCount} titres",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFF1DB954),
                             fontWeight = FontWeight.Medium
                         )
                     }
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -748,58 +677,47 @@ fun UserPlaylistItem(
                             Icons.Outlined.CalendarToday,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            tint = Color(0xFFB3B3B3)
                         )
                         Text(
                             text = formatDateShort(playlist.createdAt),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Color(0xFFB3B3B3),
                             fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
 
-            // Actions
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            // Bouton Play
+            IconButton(
+                onClick = { /* TODO: jouer la playlist */ },
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(Color(0xFF1DB954).copy(alpha = 0.1f)),
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = Color(0xFF1DB954)
+                )
             ) {
-                // Bouton play
-                IconButton(
-                    onClick = { /* TODO: Play playlist */ },
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        Icons.Filled.PlayArrow,
-                        contentDescription = "Jouer",
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                Icon(
+                    Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
-                // Bouton options (trois points)
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onOptionsClick() }
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f))
-                        .padding(4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Outlined.MoreVert,
-                        contentDescription = "Options",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                    )
-                }
+            // Menu trois points
+            IconButton(
+                onClick = onOptionsClick,
+                modifier = Modifier.size(34.dp)
+            ) {
+                Icon(
+                    Icons.Outlined.MoreVert,
+                    contentDescription = "Options",
+                    tint = Color(0xFFB3B3B3),
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -818,16 +736,16 @@ fun PlaylistOptionsMenu(
             Text(
                 playlist.name,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
             )
         },
         text = {
             Column {
-                // Option Jouer
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { /* TODO: Jouer la playlist */ }
+                        .clickable { /* TODO: jouer */ }
                         .padding(vertical = 12.dp),
                     color = Color.Transparent
                 ) {
@@ -838,18 +756,16 @@ fun PlaylistOptionsMenu(
                         Icon(
                             Icons.Filled.PlayArrow,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = Color(0xFF1DB954),
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Jouer la playlist",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = Color.White
                         )
                     }
                 }
-
-                // Option Renommer
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -864,18 +780,16 @@ fun PlaylistOptionsMenu(
                         Icon(
                             Icons.Outlined.Edit,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = Color(0xFFB3B3B3),
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Renommer",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = Color.White
                         )
                     }
                 }
-
-                // Option Supprimer
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -890,13 +804,13 @@ fun PlaylistOptionsMenu(
                         Icon(
                             Icons.Outlined.Delete,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
+                            tint = Color(0xFFCF6679),
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Supprimer",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
+                            color = Color(0xFFCF6679)
                         )
                     }
                 }
@@ -910,13 +824,15 @@ fun PlaylistOptionsMenu(
                     .height(40.dp),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = Color(0xFF1E1E1E)
                 )
             ) {
-                Text("Fermer")
+                Text("Fermer", color = Color.White)
             }
         },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color(0xFF1E1E1E),
+        titleContentColor = Color.White,
+        textContentColor = Color.White,
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.padding(horizontal = 24.dp)
     )
@@ -937,16 +853,14 @@ fun EmptyPlaylistsView(
             modifier = Modifier
                 .size(60.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-                ),
+                .background(Color(0xFF1DB954).copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Outlined.PlaylistAdd,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                tint = Color(0xFF1DB954)
             )
         }
 
@@ -956,7 +870,7 @@ fun EmptyPlaylistsView(
             text = "Aucune collection",
             style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = Color.White
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -964,7 +878,7 @@ fun EmptyPlaylistsView(
         Text(
             text = "Créez votre première collection",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = Color(0xFFB3B3B3)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -976,13 +890,14 @@ fun EmptyPlaylistsView(
                 .fillMaxWidth()
                 .height(40.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = Color(0xFF1DB954)
             )
         ) {
             Text(
                 "Créer une collection",
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = Color.White
             )
         }
     }
@@ -992,21 +907,15 @@ fun EmptyPlaylistsView(
 fun RowScope.StatCard(
     value: String,
     label: String,
-    icon: ImageVector,
-    color: Color
+    icon: ImageVector
 ) {
     Surface(
         modifier = Modifier
             .weight(1f)
-            .height(60.dp)
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(12.dp),
-                clip = true
-            ),
+            .height(60.dp),
         shape = RoundedCornerShape(12.dp),
-        color = color,
-        tonalElevation = 2.dp
+        color = Color(0xFF1E1E1E),
+        tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
@@ -1023,27 +932,27 @@ fun RowScope.StatCard(
                     icon,
                     contentDescription = null,
                     modifier = Modifier.size(12.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = Color(0xFF1DB954)
                 )
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Color(0xFFB3B3B3),
                     fontWeight = FontWeight.Medium
                 )
             }
-
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = Color.White
             )
         }
     }
 }
 
-// Helper functions
+// ==================== HELPER FUNCTIONS ====================
+
 private fun formatTotalDuration(milliseconds: Int): String {
     val seconds = milliseconds / 1000
     val hours = seconds / 3600
@@ -1066,14 +975,14 @@ private fun formatDateShort(timestamp: Long): String {
     }
 }
 
-// Modèles
+// ==================== DATA CLASSES ====================
+
 data class SpecialPlaylist(
     val id: Long,
     val title: String,
     val songCount: Int,
     val icon: ImageVector,
     val gradientColors: List<Color>,
-    val iconBackground: Color,
     val route: String
 )
 
