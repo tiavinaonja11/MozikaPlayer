@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -22,25 +23,24 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+// ✅ IMPORT DE LA FONCTION DE NAVIGATION SPÉCIALE (AJOUTÉ)
+import com.example.mozika.ui.nav.navigateToSpecialPlaylist
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PlaylistsScreen(
-    navController: NavController
+    navController: NavHostController
 ) {
     val vm: PlaylistVM = hiltViewModel()
     val playlistsWithCount by vm.playlistsWithCount.collectAsState(initial = emptyList())
@@ -65,11 +65,16 @@ fun PlaylistsScreen(
         }
     }
 
+    // Collections spéciales (déjà dynamiques)
+    val favoriteTracks by vm.favoriteTracks.collectAsState()
+    val topPlayedTracks by vm.topPlayedTracks.collectAsState()
+    val recentlyPlayedTracks by vm.recentlyPlayedTracks.collectAsState()
+
     val specialPlaylists = listOf(
         SpecialPlaylist(
             id = -1L,
             title = "Favoris",
-            songCount = 1,
+            songCount = favoriteTracks.size,
             icon = Icons.Filled.Favorite,
             gradientColors = listOf(Color(0xFFFF6B6B), Color(0xFFEE5A52)),
             iconBackground = Color(0xFFFF6B6B).copy(alpha = 0.2f),
@@ -78,7 +83,7 @@ fun PlaylistsScreen(
         SpecialPlaylist(
             id = -2L,
             title = "Top",
-            songCount = 36,
+            songCount = topPlayedTracks.size,
             icon = Icons.Filled.TrendingUp,
             gradientColors = listOf(Color(0xFF4ECDC4), Color(0xFF44A08D)),
             iconBackground = Color(0xFF4ECDC4).copy(alpha = 0.2f),
@@ -87,7 +92,7 @@ fun PlaylistsScreen(
         SpecialPlaylist(
             id = -3L,
             title = "Récent",
-            songCount = 36,
+            songCount = recentlyPlayedTracks.size,
             icon = Icons.Filled.History,
             gradientColors = listOf(Color(0xFF556270), Color(0xFF4ECDC4)),
             iconBackground = Color(0xFF556270).copy(alpha = 0.2f),
@@ -96,7 +101,7 @@ fun PlaylistsScreen(
         SpecialPlaylist(
             id = -4L,
             title = "Top 25",
-            songCount = 24,
+            songCount = minOf(topPlayedTracks.size, 25),
             icon = Icons.Filled.Star,
             gradientColors = listOf(Color(0xFFC779D0), Color(0xFFFEAC5E)),
             iconBackground = Color(0xFFC779D0).copy(alpha = 0.2f),
@@ -329,7 +334,8 @@ fun PlaylistsScreen(
                         SpecialPlaylistCard(
                             playlist = specialPlaylist,
                             onClick = {
-                                navController.navigate("playlistDetail/${specialPlaylist.id}")
+                                // ✅ CORRECTION : utilisation de la fonction d'extension
+                                navController.navigateToSpecialPlaylist(specialPlaylist.route)
                             }
                         )
                     }
@@ -992,20 +998,20 @@ fun RowScope.StatCard(
     Surface(
         modifier = Modifier
             .weight(1f)
-            .height(60.dp) // Hauteur légèrement augmentée
+            .height(60.dp)
             .shadow(
-                elevation = 2.dp, // Ajout d'ombre
-                shape = RoundedCornerShape(12.dp), // Coins plus arrondis
+                elevation = 2.dp,
+                shape = RoundedCornerShape(12.dp),
                 clip = true
             ),
-        shape = RoundedCornerShape(12.dp), // Coins plus arrondis
+        shape = RoundedCornerShape(12.dp),
         color = color,
-        tonalElevation = 2.dp // Élévation augmentée
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 12.dp), // Plus de padding
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
@@ -1016,12 +1022,12 @@ fun RowScope.StatCard(
                 Icon(
                     icon,
                     contentDescription = null,
-                    modifier = Modifier.size(12.dp), // Taille augmentée
+                    modifier = Modifier.size(12.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp), // Police légèrement plus grande
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
@@ -1029,7 +1035,7 @@ fun RowScope.StatCard(
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp), // Police légèrement plus grande
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
             )

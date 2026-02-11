@@ -1,5 +1,7 @@
 package com.example.mozika.ui.nav
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -14,8 +16,10 @@ import com.example.mozika.ui.library.ArtistDetailScreen
 import com.example.mozika.ui.player.PlayerScreen
 import com.example.mozika.ui.playlist.PlaylistsScreen
 import com.example.mozika.ui.playlist.PlaylistDetailScreen
+import com.example.mozika.ui.playlist.SpecialPlaylistScreen  // ⚠️ IMPORTANT : ajouter cet import
 import com.example.mozika.ui.profile.ProfileScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNav(
     nav: NavHostController = rememberNavController()
@@ -47,6 +51,20 @@ fun AppNav(
             val playlistId = backStackEntry.arguments?.getLong("id") ?: 0L
             PlaylistDetailScreen(
                 playlistId = playlistId,
+                navController = nav
+            )
+        }
+
+        // ✅ ROUTE POUR LES PLAYLISTS SPÉCIALES (FAVORIS, RÉCEMMENT ÉCOUTÉS, LES PLUS ÉCOUTÉS)
+        composable(
+            route = "specialPlaylist/{playlistType}",
+            arguments = listOf(
+                navArgument("playlistType") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val playlistType = backStackEntry.arguments?.getString("playlistType") ?: ""
+            SpecialPlaylistScreen(
+                playlistType = playlistType,
                 navController = nav
             )
         }
@@ -89,8 +107,9 @@ fun AppNav(
     }
 }
 
-// Fonctions d'extension simplifiées
-fun NavHostController.navigateToAlbum(albumId: NavHostController) {
+// ✅ FONCTIONS D'EXTENSION SIMPLIFIÉES
+
+fun NavHostController.navigateToAlbum(albumId: String) {
     this.navigate("album/$albumId") {
         launchSingleTop = true
     }
@@ -108,3 +127,9 @@ fun NavHostController.navigateToTrack(trackId: Long) {
     }
 }
 
+
+fun NavHostController.navigateToSpecialPlaylist(playlistType: String) {
+    this.navigate("specialPlaylist/$playlistType") {
+        launchSingleTop = true
+    }
+}

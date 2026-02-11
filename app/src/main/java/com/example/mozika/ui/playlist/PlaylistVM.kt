@@ -3,8 +3,16 @@ package com.example.mozika.ui.playlist
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mozika.data.repo.PlaylistRepo
+import com.example.mozika.domain.model.Playlist
+import com.example.mozika.domain.model.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -58,6 +66,30 @@ class PlaylistVM @Inject constructor(
         SharingStarted.WhileSubscribed(5000),
         PlaylistStats()
     )
+
+    // ===== COLLECTIONS SPÉCIALES =====
+
+    // Favoris
+    val favoriteTracks: StateFlow<List<Track>> = playlistRepo.getFavoriteTracks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Top joués
+    val topPlayedTracks: StateFlow<List<Pair<Track, Int>>> = playlistRepo.getTopPlayedTracks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Récemment joués
+    val recentlyPlayedTracks: StateFlow<List<Track>> = playlistRepo.getRecentlyPlayedTracks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Compteurs pour l'affichage
+    val favoriteCount: StateFlow<Int> = playlistRepo.getFavoriteCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val topPlayedCount: StateFlow<Int> = playlistRepo.getTopPlayedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val recentlyPlayedCount: StateFlow<Int> = playlistRepo.getRecentlyPlayedCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /**
      * Créer une nouvelle playlist et retourner son ID
@@ -171,9 +203,35 @@ class PlaylistVM @Inject constructor(
     }
 
     /**
+     * Toggle favoris
+     */
+    fun toggleFavorite(trackId: Long, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val isNowFavorite = playlistRepo.toggleFavorite(trackId)
+                onResult(isNowFavorite)
+            } catch (e: Exception) {
+                _errorMessage.value = "Erreur favoris: ${e.message}"
+                onResult(false)
+            }
+        }
+    }
+
+    /**
+     * Vérifier si un track est favori
+     */
+    suspend fun isFavorite(trackId: Long): Boolean {
+        return try {
+            playlistRepo.isFavorite(trackId)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
      * Rechercher des playlists
      */
-    fun searchPlaylists(query: String): Flow<List<PlaylistWithCount>> {
+    fun searchPlaylists(query: String): StateFlow<List<PlaylistWithCount>> {
         return if (query.isBlank()) {
             playlistsWithCount
         } else {
@@ -199,7 +257,7 @@ class PlaylistVM @Inject constructor(
                         }.sortedByDescending { it.createdAt }
                     }
                 }
-            }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
         }
     }
 
@@ -215,11 +273,11 @@ class PlaylistVM @Inject constructor(
     }
 
     // États pour gérer les opérations
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private val _isLoading = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _errorMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
 
     fun clearError() {
         _errorMessage.value = null
@@ -233,7 +291,7 @@ data class PlaylistStats(
     val totalDuration: Int = 0
 )
 
-// Modèle de données pour une playlist avec son nombre de chansons
+
 data class Playlist(
     val id: Long,
     val name: String,

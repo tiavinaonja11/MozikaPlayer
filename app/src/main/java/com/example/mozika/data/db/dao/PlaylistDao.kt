@@ -27,9 +27,7 @@ interface PlaylistDao {
 
     @Transaction
     suspend fun deletePlaylistById(id: Long) {
-        // D'abord supprimer les références dans playlisttrack
         deletePlaylistTracks(id)
-        // Puis supprimer la playlist elle-même
         deleteById(id)
     }
 

@@ -16,39 +16,23 @@ object DbModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(
-        app: Application
-    ): AppDatabase =
-        Room.databaseBuilder(
-            app,
-            AppDatabase::class.java,
-            "sonic_v2.db" // Changed name to force recreation
-        )
-            .fallbackToDestructiveMigration() // Temporaire - à remplacer par une migration
+    fun provideDatabase(app: Application): AppDatabase =
+        Room.databaseBuilder(app, AppDatabase::class.java, "sonic_v2.db")
+            .fallbackToDestructiveMigration()
             .build()
 
     @Provides
-    fun provideTrackDao(
-        db: AppDatabase
-    ): TrackDao = db.trackDao()
-
+    fun provideTrackDao(db: AppDatabase): TrackDao = db.trackDao()
     @Provides
-    fun provideAlbumDao(
-        db: AppDatabase
-    ): AlbumDao = db.albumDao()
-
+    fun provideAlbumDao(db: AppDatabase): AlbumDao = db.albumDao()
     @Provides
-    fun provideArtistDao(
-        db: AppDatabase
-    ): ArtistDao = db.artistDao()
-
+    fun provideArtistDao(db: AppDatabase): ArtistDao = db.artistDao()
     @Provides
-    fun providePlaylistDao(
-        db: AppDatabase
-    ): PlaylistDao = db.playlistDao()
-
+    fun providePlaylistDao(db: AppDatabase): PlaylistDao = db.playlistDao()
     @Provides
-    fun provideWaveformDao(
-        db: AppDatabase
-    ): WaveformDao = db.waveformDao()
+    fun provideWaveformDao(db: AppDatabase): WaveformDao = db.waveformDao()
+    @Provides
+    fun provideFavoriteDao(db: AppDatabase): FavoriteDao = db.favoriteDao()
+    @Provides
+    fun providePlayCountDao(db: AppDatabase): PlayCountDao = db.playCountDao()
 }

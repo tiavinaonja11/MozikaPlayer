@@ -40,6 +40,7 @@ import com.example.mozika.ui.player.components.PremiumAudioWaveform
 import com.example.mozika.ui.playlist.PlaylistVM
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,6 +80,12 @@ fun PlayerScreen(
         EmptyPlayerScreen(navController)
         return
     }
+
+    // CORRECTION: Observer l'état des favoris de manière réactive
+    val currentTrackId = vm.currentTrack?.id
+    val isFavorite by playlistVM.favoriteTracks
+        .map { tracks -> currentTrackId?.let { id -> tracks.any { it.id == id } } ?: false }
+        .collectAsState(initial = false)
 
     Box(
         modifier = Modifier
@@ -390,21 +397,22 @@ fun PlayerScreen(
                     }
                 )
 
-                // Favorite - FONCTIONNEL avec état persistant
-                var isFavorite by remember { mutableStateOf(false) }
+                // CORRECTION: Le bouton Favorite - maintenant réactif et fonctionnel
                 ControlButtonWithLabel(
                     icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     label = "Favorite",
                     isActive = isFavorite,
                     activeColor = Color(0xFF1DB954),
                     onClick = {
-                        isFavorite = !isFavorite
-                        vm.toggleFavorite()
-                        Toast.makeText(
-                            context,
-                            if (isFavorite) "Ajouté aux favoris" else "Retiré des favoris",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        currentTrackId?.let { id ->
+                            playlistVM.toggleFavorite(id) { nowFavorite ->
+                                Toast.makeText(
+                                    context,
+                                    if (nowFavorite) "Ajouté aux favoris" else "Retiré des favoris",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     }
                 )
 

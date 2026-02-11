@@ -12,8 +12,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.media3.common.util.UnstableApi
-import com.example.mozika.service.notification.CustomNotificationProvider  // ✅ IMPORT
+import com.example.mozika.service.notification.CustomNotificationProvider
 import com.example.mozika.service.PlaybackService
 import com.example.mozika.ui.nav.MainScaffold
 import com.example.mozika.ui.theme.SonicFlowTheme
@@ -31,7 +33,9 @@ class MainActivity : ComponentActivity() {
             startPlaybackService()
         } else {
             println("DEBUG - Permission audio refusée")
-            // On démarre quand même le service
+            // On pourrait afficher un message à l'utilisateur ici
+            // Mais on démarre quand même l'application
+            showPermissionDeniedWarning()
             startPlaybackService()
         }
     }
@@ -56,6 +60,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        // Nettoyage des flags d'écran allumé
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
     private fun checkAndRequestPermissions() {
         if (!PermissionHelper.hasAudioPermission(this)) {
             val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -70,23 +80,42 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun showPermissionDeniedWarning() {
+        // TODO: Implémenter un Snackbar ou Dialog pour informer l'utilisateur
+        // que certaines fonctionnalités peuvent être limitées
+        println("Avertissement: Permission audio refusée. Certaines fonctionnalités peuvent être limitées.")
+    }
+
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun startPlaybackService() {
         try {
             println("DEBUG - Démarrage de PlaybackService")
             val serviceIntent = Intent(this, PlaybackService::class.java)
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
+            // Vérifier si le service est déjà en cours d'exécution
+            if (!isPlaybackServiceRunning()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+                println("DEBUG - Service démarré avec succès")
             } else {
-                startService(serviceIntent)
+                println("DEBUG - Service déjà en cours d'exécution")
             }
 
-            println("DEBUG - Service démarré avec succès")
-
         } catch (e: Exception) {
-            println("DEBUG - Erreur: ${e.message}")
+            println("DEBUG - Erreur lors du démarrage du service: ${e.message}")
+            e.printStackTrace()
         }
+    }
+
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun isPlaybackServiceRunning(): Boolean {
+        // Vérifier si le service est déjà en cours d'exécution
+        val manager = getSystemService(android.app.ActivityManager::class.java)
+        return manager.getRunningServices(Integer.MAX_VALUE)
+            .any { it.service.className == PlaybackService::class.java.name }
     }
 }
 
@@ -94,10 +123,38 @@ class MainActivity : ComponentActivity() {
 @OptIn(UnstableApi::class)
 @Composable
 fun MainApp() {
+    val context = LocalContext.current
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         MainScaffold()
+    }
+}
+
+// Fonction utilitaire pour démarrer le service depuis d'autres composants Composable
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun StartPlaybackServiceIfNeeded() {
+    val context = LocalContext.current
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        // Démarrer le service au besoin
+        if (!PermissionHelper.hasAudioPermission(context)) {
+            // Si pas de permission, on ne démarre pas le service
+            return@LaunchedEffect
+        }
+
+        try {
+            val serviceIntent = Intent(context, PlaybackService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(context, serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            println("Erreur dans StartPlaybackServiceIfNeeded: ${e.message}")
+        }
     }
 }

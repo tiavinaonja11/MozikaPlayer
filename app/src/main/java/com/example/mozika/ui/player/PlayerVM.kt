@@ -22,6 +22,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.example.mozika.data.datastore.PlayerPreferences
 import com.example.mozika.data.db.entity.Track
+import com.example.mozika.data.repo.PlaylistRepo
 import com.example.mozika.data.repo.TrackRepo
 import com.example.mozika.domain.usecase.GenWaveform
 import com.example.mozika.domain.usecase.GetTracks
@@ -39,6 +40,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import com.example.mozika.domain.model.Track as DomainTrack
+import kotlinx.coroutines.flow.map
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(UnstableApi::class)
@@ -50,7 +52,8 @@ class PlayerVM @Inject constructor(
     private val trackRepo: TrackRepo,
     private val playerPreferences: PlayerPreferences,
     private val getTracks: GetTracks,
-    private val mediaSession: MediaSession  // ✅ CORRECTION: Utiliser MediaSession de androidx.media3
+    private val mediaSession: MediaSession,
+    private val playlistRepo: PlaylistRepo
 ) : ViewModel() {
 
     // ============================================
@@ -94,6 +97,8 @@ class PlayerVM @Inject constructor(
     val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
 
     private var originalQueue: List<Track> = emptyList()
+
+
 
     // ============================================
     // PROPRIÉTÉS EXISTANTES (CONSERVÉES)
@@ -175,7 +180,7 @@ class PlayerVM @Inject constructor(
 
                 // 2. ✅ CORRECTION: Préparation des MediaItems avec métadonnées COMPLÈTES
                 val mediaItems = playlist.map { track ->
-                    createMediaItemWithCompleteMetadata(track)  // ✅ Utiliser cette méthode au lieu de builder simple
+                    createMediaItemWithCompleteMetadata(track)
                 }
 
                 withContext(Dispatchers.Main) {
@@ -193,19 +198,19 @@ class PlayerVM @Inject constructor(
                     currentTrack = selectedTrack
                     _currentTrackFlow.value = selectedTrack
 
-                    // ✅ CORRECTION: Invalider la notification pour forcer la mise à jour
-                    // Note: On ne peut pas appeler directement invalidateNotification() depuis ici
-                    // car c'est dans le Service, mais les métadonnées sont maintenant correctement définies
-                    // et le listener onMediaMetadataChanged dans le Service déclenchera invalidateNotification()
-
                     // Génération de la waveform
                     generateWaveformForTrack(selectedTrack.data)
                 }
+
+                // 5. Incrémenter le compteur de lecture (hors withContext)
+                playlistRepo.incrementPlayCount(trackId)
+
             } catch (e: Exception) {
                 println("❌ Erreur de chargement : ${e.message}")
             }
         }
     }
+
 
     /**
      * ✅ NOUVELLE MÉTHODE: Crée un MediaItem avec métadonnées COMPLÈTES pour les notifications
