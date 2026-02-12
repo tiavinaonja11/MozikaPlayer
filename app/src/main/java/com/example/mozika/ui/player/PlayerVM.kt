@@ -55,7 +55,7 @@ class PlayerVM @Inject constructor(
     private val getTracks: GetTracks,
     private val mediaSession: MediaSession,
     private val playlistRepo: PlaylistRepo,
-    private val playerStateManager: PlayerStateManager
+    private val playerStateManager: PlayerStateManager,
 ) : ViewModel() {
 
     // ============================================
@@ -99,6 +99,8 @@ class PlayerVM @Inject constructor(
     val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
 
     private var originalQueue: List<Track> = emptyList()
+
+    val savedPlayerState = playerPreferences.playerState
 
 
 
@@ -654,7 +656,7 @@ class PlayerVM @Inject constructor(
     // ✅ CORRECTIONS : SAUVEGARDE ET RESTAURATION
     // ============================================
 
-    private fun savePlayerState() {
+    fun savePlayerState() {  // ← plus private
         viewModelScope.launch {
             currentTrack?.let { track ->
                 val contextType = when (playlistContext) {
@@ -674,22 +676,28 @@ class PlayerVM @Inject constructor(
 
                 playerPreferences.savePlayerState(
                     trackId = track.id,
-                    isPlaying = mediaSession.player.isPlaying, // ✅ Utiliser mediaSession.player
-                    position = mediaSession.player.currentPosition, // ✅ Utiliser mediaSession.player
+                    isPlaying = mediaSession.player.isPlaying,
+                    position = mediaSession.player.currentPosition,
                     playlistContext = contextType,
                     contextId = contextId
                 )
 
-                println("💾 DEBUG - État sauvegardé via MediaSession: ${track.title}")
+                println("💾 DEBUG - État sauvegardé: ${track.title} à ${mediaSession.player.currentPosition}ms")
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun restorePlayerState() {
+// ============================================
+// RESTAURATION - CORRECTION : public + amélioration
+// ============================================
+
+    /**
+     * Restaure l'état sans démarrer la lecture (appelé au démarrage de l'app)
+     */
+    fun restorePlayerState() {  // ← plus private
         viewModelScope.launch {
             playerPreferences.playerState.firstOrNull()?.let { state ->
-                if (state.trackId > 0) {
+                if (state.trackId > 0 && currentTrack == null) {
                     playlistContext = when (state.playlistContext) {
                         "album" -> PlaylistContext.Album(state.contextId)
                         "artist" -> PlaylistContext.Artist(state.contextId)
@@ -698,28 +706,66 @@ class PlayerVM @Inject constructor(
                         else -> PlaylistContext.None
                     }
 
+                    // Charger sans jouer
                     load(state.trackId, autoPlay = false)
 
-                    delay(200)
-                    mediaSession.player.seekTo(state.position) // ✅ Utiliser mediaSession.player
+                    delay(300)
+                    mediaSession.player.seekTo(state.position)
 
-                    println("↩️ DEBUG - État restauré via MediaSession: track ${state.trackId}")
+                    println("↩️ DEBUG - État restauré (sans lecture): track ${state.trackId} à ${state.position}ms")
                 }
             }
         }
     }
 
-    private fun startAutoSave() {
+    /**
+     * NOUVEAU : Restaure ET démarre la lecture (quand on clique sur MiniPlayer)
+     */
+    fun restoreAndPlay() {  // ← NOUVEAU
+        viewModelScope.launch {
+            playerPreferences.playerState.firstOrNull()?.let { state ->
+                if (state.trackId > 0) {
+                    // Restaurer le contexte si pas déjà fait
+                    if (playlistContext is PlaylistContext.None) {
+                        playlistContext = when (state.playlistContext) {
+                            "album" -> PlaylistContext.Album(state.contextId)
+                            "artist" -> PlaylistContext.Artist(state.contextId)
+                            "search" -> PlaylistContext.Search(state.contextId)
+                            "all_tracks" -> PlaylistContext.AllTracks
+                            else -> PlaylistContext.None
+                        }
+                    }
+
+                    // Si déjà chargé, juste play
+                    if (currentTrack?.id == state.trackId) {
+                        mediaSession.player.play()
+                        println("▶️ DEBUG - Reprise de la lecture")
+                    } else {
+                        // Sinon charger et jouer
+                        load(state.trackId, autoPlay = true)
+                        delay(300)
+                        mediaSession.player.seekTo(state.position)
+                        println("↩️▶️ DEBUG - Restauration et lecture: track ${state.trackId}")
+                    }
+                }
+            }
+        }
+    }
+
+// ============================================
+// AUTO-SAVE - CORRECTION : public si besoin d'arrêt manuel
+// ============================================
+
+    private fun startAutoSave() {  // garde private, appelé dans init
         viewModelScope.launch {
             while (true) {
                 delay(5000)
-                if (mediaSession.player.isPlaying) { // ✅ Utiliser mediaSession.player
+                if (mediaSession.player.isPlaying) {
                     savePlayerState()
                 }
             }
         }
     }
-
     // ============================================
     // CHARGEMENT DES PISTES - CONSERVÉS
     // ============================================
@@ -1031,4 +1077,5 @@ class PlayerVM @Inject constructor(
     }
 
     fun getForceUpdateFlow() = _forceUpdate.asStateFlow()
+
 }

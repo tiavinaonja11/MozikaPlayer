@@ -536,7 +536,8 @@ fun LibraryScreen(
 
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    key = { page -> "pager_page_$page" }  // ✅ Clé simple et unique
                 ) { page ->
                     when (page) {
                         0 -> {
@@ -551,7 +552,10 @@ fun LibraryScreen(
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
-                                    items(tracks, key = { it.id }) { track ->
+                                    items(
+                                        items = tracks,
+                                        key = { track -> "track_${track.id}_${track.hashCode()}" }  // ✅ Clé unique avec hash
+                                    ) { track ->
                                         val isCurrentTrack = track.id.toString() == currentlyPlayingTrackId
                                         TrackItemWithPlayingIndicator(
                                             track = track,
@@ -560,7 +564,9 @@ fun LibraryScreen(
                                             navController = nav
                                         )
                                     }
-                                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                                    item(key = "tracks_spacer_bottom") {
+                                        Spacer(modifier = Modifier.height(80.dp))
+                                    }
                                 }
                             }
                         }
@@ -576,10 +582,19 @@ fun LibraryScreen(
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
-                                    items(albums, key = { it.id }) { album ->
+                                    items(
+                                        items = albums,
+                                        key = { album ->
+                                            // ✅ PROTECTION : Gérer les IDs null ou "<unknown>"
+                                            val safeId = album.id?.takeIf { it != "<unknown>" } ?: "idx_${albums.indexOf(album)}"
+                                            "album_${safeId}_${album.hashCode()}"
+                                        }
+                                    ) { album ->
                                         AlbumItemMinimal(album = album, navController = nav)
                                     }
-                                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                                    item(key = "albums_spacer_bottom") {
+                                        Spacer(modifier = Modifier.height(80.dp))
+                                    }
                                 }
                             }
                         }
@@ -595,10 +610,19 @@ fun LibraryScreen(
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(0.dp)
                                 ) {
-                                    items(artists, key = { it.id }) { artist ->
+                                    items(
+                                        items = artists,
+                                        key = { artist ->
+                                            // ✅ PROTECTION : Gérer les IDs null ou "<unknown>"
+                                            val safeId = artist.id?.takeIf { it != "<unknown>" } ?: "idx_${artists.indexOf(artist)}"
+                                            "artist_${safeId}_${artist.hashCode()}"
+                                        }
+                                    ) { artist ->
                                         ArtistItemMinimal(artist = artist, navController = nav)
                                     }
-                                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                                    item(key = "artists_spacer_bottom") {
+                                        Spacer(modifier = Modifier.height(80.dp))
+                                    }
                                 }
                             }
                         }

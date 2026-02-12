@@ -21,4 +21,8 @@ interface TrackDao {
 
     @Query("SELECT * FROM tracks WHERE title LIKE '%' || :query || '%'")
     fun search(query: String): Flow<List<Track>>
+
+    // Dans TrackDao.kt, assurez-vous d'avoir :
+    @Query("SELECT * FROM tracks WHERE id = :trackId LIMIT 1")
+    suspend fun getById(trackId: Long): Track?
 }

@@ -25,6 +25,12 @@ class TrackRepo @Inject constructor(
         trackDao.insertAll(scannedTracks)
     }
 
+    // Dans TrackRepo.kt, ajoutez :
+
+    suspend fun getTrackById(trackId: Long): Track? {
+        return trackDao.getById(trackId)
+    }
+
     fun tracks(): Flow<List<DomainTrack>> =
         trackDao.getAll().map { entityList ->
             entityList.map { track ->

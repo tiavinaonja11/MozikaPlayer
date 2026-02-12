@@ -7,6 +7,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,12 +20,16 @@ import androidx.media3.common.util.UnstableApi
 import com.example.mozika.service.notification.CustomNotificationProvider
 import com.example.mozika.service.PlaybackService
 import com.example.mozika.ui.nav.MainScaffold
+import com.example.mozika.ui.player.PlayerVM
 import com.example.mozika.ui.theme.SonicFlowTheme
 import com.example.mozika.utils.PermissionHelper
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    // ✅ AJOUT : ViewModel pour restaurer l'état du player
+    private val playerVM: PlayerVM by viewModels()
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -33,13 +39,12 @@ class MainActivity : ComponentActivity() {
             startPlaybackService()
         } else {
             println("DEBUG - Permission audio refusée")
-            // On pourrait afficher un message à l'utilisateur ici
-            // Mais on démarre quand même l'application
             showPermissionDeniedWarning()
             startPlaybackService()
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @androidx.annotation.OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +57,11 @@ class MainActivity : ComponentActivity() {
 
         // Vérifier et demander les permissions
         checkAndRequestPermissions()
+
+        // ✅ AJOUT : Restaurer l'état du player au démarrage
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            playerVM.restorePlayerState()
+        }
 
         setContent {
             SonicFlowTheme {
@@ -81,8 +91,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun showPermissionDeniedWarning() {
-        // TODO: Implémenter un Snackbar ou Dialog pour informer l'utilisateur
-        // que certaines fonctionnalités peuvent être limitées
         println("Avertissement: Permission audio refusée. Certaines fonctionnalités peuvent être limitées.")
     }
 
@@ -92,7 +100,6 @@ class MainActivity : ComponentActivity() {
             println("DEBUG - Démarrage de PlaybackService")
             val serviceIntent = Intent(this, PlaybackService::class.java)
 
-            // Vérifier si le service est déjà en cours d'exécution
             if (!isPlaybackServiceRunning()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -112,13 +119,13 @@ class MainActivity : ComponentActivity() {
 
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun isPlaybackServiceRunning(): Boolean {
-        // Vérifier si le service est déjà en cours d'exécution
         val manager = getSystemService(android.app.ActivityManager::class.java)
         return manager.getRunningServices(Integer.MAX_VALUE)
             .any { it.service.className == PlaybackService::class.java.name }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(UnstableApi::class)
 @Composable
@@ -133,16 +140,13 @@ fun MainApp() {
     }
 }
 
-// Fonction utilitaire pour démarrer le service depuis d'autres composants Composable
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun StartPlaybackServiceIfNeeded() {
     val context = LocalContext.current
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        // Démarrer le service au besoin
         if (!PermissionHelper.hasAudioPermission(context)) {
-            // Si pas de permission, on ne démarre pas le service
             return@LaunchedEffect
         }
 

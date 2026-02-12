@@ -30,7 +30,7 @@ class CustomNotificationProvider(
         const val CHANNEL_ID = "playback"
         const val ACTION_PLAY = "com.example.mozika.ACTION_PLAY"
         const val ACTION_PAUSE = "com.example.mozika.ACTION_PAUSE"
-        const val ACTION_PLAY_PAUSE = "com.example.mozika.ACTION_PLAY_PAUSE"  // ✅ AJOUTÉ
+        const val ACTION_PLAY_PAUSE = "com.example.mozika.ACTION_PLAY_PAUSE"
         const val ACTION_PREVIOUS = "com.example.mozika.ACTION_PREVIOUS"
         const val ACTION_NEXT = "com.example.mozika.ACTION_NEXT"
         const val ACTION_STOP = "com.example.mozika.ACTION_STOP"
