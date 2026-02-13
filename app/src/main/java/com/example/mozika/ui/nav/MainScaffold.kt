@@ -42,20 +42,16 @@ fun MainScaffold() {
 
     val isInPlayerScreen = currentRoute.startsWith("player/")
 
-    // Vérifier si la route contient ces mots-clés (pour gérer les routes avec paramètres)
-    val isSpecialPlaylist = currentRoute.contains("favorites") ||
-            currentRoute.contains("recently_played") ||
-            currentRoute.contains("most_played") ||
-            currentRoute.contains("top_played")
+    // ✅ CORRECTION : Vérifier les routes exactes comme définies dans Nav.kt
+    val isSpecialPlaylist = currentRoute.startsWith("specialPlaylist/")
 
-    val isPlaylistDetail = currentRoute.contains("playlistDetail")  // ← Vérifier contient, pas égal
+    val isPlaylistDetail = currentRoute.startsWith("playlistDetail/")
 
-    val isAlbumOrArtist = currentRoute.substringBefore("/") in listOf("album", "artist")
+    val isAlbumOrArtist = currentRoute.startsWith("album/") || currentRoute.startsWith("artist/")
 
-    // Routes qui ne doivent pas afficher la barre de navigation
+    // Masquer la bottom nav pour ces écrans
     val hideBottomNav = isInPlayerScreen || isSpecialPlaylist || isPlaylistDetail || isAlbumOrArtist
 
-    // Surface racine noire
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = BackgroundBlack
@@ -64,28 +60,37 @@ fun MainScaffold() {
             containerColor = BackgroundBlack,
             bottomBar = {
                 when {
+                    // Écran player : rien
                     isInPlayerScreen -> {
-                        // Rien - écran player plein écran
+                        // Rien
                     }
 
+                    // Album/Artist : mini player seul
                     isAlbumOrArtist -> {
-                        // Mini player seul pour album/artist
                         MiniPlayerBar(
                             navController = navController,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
 
-                    isSpecialPlaylist || isPlaylistDetail -> {  // ← Ajouté isPlaylistDetail ici
-                        // Mini player seul pour les playlists (pas de bottom nav)
+                    // ✅ Playlists spéciales (favorites, recently_played, etc.) : mini player seul
+                    isSpecialPlaylist -> {
                         MiniPlayerBar(
                             navController = navController,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
 
+                    // ✅ Détail playlist normale : mini player seul
+                    isPlaylistDetail -> {
+                        MiniPlayerBar(
+                            navController = navController,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    // Autres écrans : mini player + bottom nav
                     else -> {
-                        // Mini player + bottom navigation pour les autres écrans
                         Column(
                             modifier = Modifier.background(BackgroundBlack)
                         ) {
@@ -93,10 +98,7 @@ fun MainScaffold() {
                                 navController = navController,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                             )
-
-                            if (!hideBottomNav) {
-                                ModernBottomNavigation(navController = navController)
-                            }
+                            ModernBottomNavigation(navController = navController)
                         }
                     }
                 }

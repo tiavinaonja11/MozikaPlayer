@@ -71,7 +71,6 @@ fun PlayerScreen(
 
     LaunchedEffect(shouldLoadTrack) {
         if (shouldLoadTrack && trackId != null) {
-            delay(50)
             vm.load(trackId)
         }
     }

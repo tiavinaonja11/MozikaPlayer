@@ -280,23 +280,7 @@ fun PlaylistsScreen(
                     }
                 }
             },
-            floatingActionButton = {
-                if (!showSearchBar) {
-                    FloatingActionButton(
-                        onClick = { showDialog = true },
-                        containerColor = CyanPrimary,
-                        contentColor = BackgroundBlack,
-                        shape = CircleShape,
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            },
+
             containerColor = BackgroundBlack
         ) { paddingValues ->
             LazyColumn(
