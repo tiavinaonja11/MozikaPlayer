@@ -645,6 +645,8 @@ fun TrackItemWithPlayingIndicator(
     isCurrentTrack: Boolean,
     navController: NavHostController
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Surface(
         onClick = { navController.navigate("player/${track.id}") },
         modifier = Modifier
@@ -748,7 +750,7 @@ fun TrackItemWithPlayingIndicator(
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
-                onClick = { },
+                onClick = { menuExpanded = true },
                 modifier = Modifier.size(36.dp)
             ) {
                 Icon(
@@ -758,6 +760,12 @@ fun TrackItemWithPlayingIndicator(
                     modifier = Modifier.size(20.dp)
                 )
             }
+
+            com.example.mozika.ui.components.TrackOptionsMenu(
+                track = track,
+                expanded = menuExpanded,
+                onDismiss = { menuExpanded = false }
+            )
         }
     }
 }

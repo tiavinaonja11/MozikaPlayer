@@ -3,8 +3,10 @@ package com.example.mozika.ui.components
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,16 +19,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.PopupProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import com.example.mozika.domain.model.Track
 import com.example.mozika.ui.playlist.PlaylistVM
 import com.example.mozika.ui.playlist.PlaylistWithCount
@@ -35,14 +37,15 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * Menu d'options pour une chanson - VERSION COMPLÈTE
+ * Menu d'options pour une chanson - VERSION BOTTOM SHEET
  */
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackOptionsMenu(
     track: Track,
     expanded: Boolean,
     onDismiss: () -> Unit,
-    navController: NavHostController,
     modifier: Modifier = Modifier,
     onTrackRemoved: (() -> Unit)? = null
 ) {
@@ -51,120 +54,166 @@ fun TrackOptionsMenu(
     val playerVM: PlayerVM = hiltViewModel()
     val playlists by playlistVM.playlistsWithCount.collectAsState()
     val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
     var showInfoDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismiss,
-        offset = DpOffset(x = (-16).dp, y = 0.dp),
-        modifier = modifier
-            .width(240.dp)
-            .background(
-                color = Color(0xFF282828),
-                shape = RoundedCornerShape(12.dp)
-            ),
-        properties = PopupProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
-        // Lire la suite (Play Next)
-        TrackMenuItem(
-            icon = Icons.Outlined.PlayArrow,
-            text = "Lire la suite",
-            onClick = {
-                onDismiss()
-                playerVM.playNext(track)
-                Toast.makeText(context, "Sera lu ensuite", Toast.LENGTH_SHORT).show()
+    if (expanded) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = sheetState,
+            containerColor = Color(0xFF1E1E1E),
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(color = Color(0xFF555555))
             }
-        )
-
-        // Ajouter à la file
-        TrackMenuItem(
-            icon = Icons.Outlined.PlaylistAdd,
-            text = "Ajouter à la file",
-            onClick = {
-                onDismiss()
-                playerVM.addToQueue(track)
-                Toast.makeText(context, "Ajouté à la file d'attente", Toast.LENGTH_SHORT).show()
+        ) {
+            // Header : infos de la chanson
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF1DB954).copy(alpha = 0.3f),
+                                    Color(0xFF1DB954).copy(alpha = 0.1f)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Rounded.MusicNote,
+                        contentDescription = null,
+                        tint = Color(0xFF1DB954),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = track.title,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        ),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = track.artist,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                        color = Color(0xFFB3B3B3),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-        )
 
-        // Ajouter à une Playlist
-        TrackMenuItem(
-            icon = Icons.Outlined.LibraryAdd,
-            text = "Ajouter à une Playlist",
-            onClick = {
-                showPlaylistDialog = true
-                onDismiss()
-            }
-        )
+            HorizontalDivider(color = Color(0xFF333333), thickness = 0.5.dp)
 
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 4.dp),
-            thickness = 0.5.dp,
-            color = Color(0xFF404040)
-        )
+            Spacer(modifier = Modifier.height(8.dp))
 
-        // Partager
-        TrackMenuItem(
-            icon = Icons.Outlined.Share,
-            text = "Partager",
-            onClick = {
-                onDismiss()
-                shareTrack(context, track)
-            }
-        )
+            // Options
+            TrackMenuItem(
+                icon = Icons.Outlined.PlayArrow,
+                text = "Lire la suite",
+                onClick = {
+                    onDismiss()
+                    playerVM.playNext(track)
+                    Toast.makeText(context, "Sera lu ensuite", Toast.LENGTH_SHORT).show()
+                }
+            )
 
-        // Modifier
-        TrackMenuItem(
-            icon = Icons.Outlined.Edit,
-            text = "Modifier",
-            onClick = {
-                onDismiss()
-                showEditDialog = true
-            }
-        )
+            TrackMenuItem(
+                icon = Icons.Outlined.PlaylistAdd,
+                text = "Ajouter à la Liste",
+                onClick = {
+                    onDismiss()
+                    playerVM.addToQueue(track)
+                    Toast.makeText(context, "Ajouté à la file d'attente", Toast.LENGTH_SHORT).show()
+                }
+            )
 
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 4.dp),
-            thickness = 0.5.dp,
-            color = Color(0xFF404040)
-        )
+            TrackMenuItem(
+                icon = Icons.Outlined.LibraryAdd,
+                text = "Ajouter à la Playlist",
+                onClick = {
+                    showPlaylistDialog = true
+                    onDismiss()
+                }
+            )
 
-        // Informations
-        TrackMenuItem(
-            icon = Icons.Outlined.Info,
-            text = "Informations",
-            onClick = {
-                onDismiss()
-                showInfoDialog = true
-            }
-        )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                thickness = 0.5.dp,
+                color = Color(0xFF333333)
+            )
 
-        // Faire sonner
-        TrackMenuItem(
-            icon = Icons.Outlined.Notifications,
-            text = "Faire sonner",
-            onClick = {
-                onDismiss()
-                setAsRingtone(context, track)
-            }
-        )
+            TrackMenuItem(
+                icon = Icons.Outlined.Share,
+                text = "Partager",
+                onClick = {
+                    onDismiss()
+                    shareTrack(context, track)
+                }
+            )
 
-        // Masquer
-        TrackMenuItem(
-            icon = Icons.Outlined.VisibilityOff,
-            text = "Masquer",
-            onClick = {
-                onDismiss()
-                showDeleteConfirm = true
-            }
-        )
+            TrackMenuItem(
+                icon = Icons.Outlined.Edit,
+                text = "Modifier",
+                onClick = {
+                    onDismiss()
+                    showEditDialog = true
+                }
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                thickness = 0.5.dp,
+                color = Color(0xFF333333)
+            )
+
+            TrackMenuItem(
+                icon = Icons.Outlined.Info,
+                text = "Information",
+                onClick = {
+                    onDismiss()
+                    showInfoDialog = true
+                }
+            )
+
+            TrackMenuItem(
+                icon = Icons.Outlined.Notifications,
+                text = "Faire comme sonnerie",
+                onClick = {
+                    onDismiss()
+                    setAsRingtone(context, track)
+                }
+            )
+
+            TrackMenuItem(
+                icon = Icons.Outlined.VisibilityOff,
+                text = "Masquer",
+                onClick = {
+                    onDismiss()
+                    showDeleteConfirm = true
+                }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
 
     // Dialog pour sélectionner/créer une playlist
@@ -265,7 +314,7 @@ fun TrackOptionsMenu(
 }
 
 /**
- * Item de menu personnalisé
+ * Item de menu pour le BottomSheet
  */
 @Composable
 private fun TrackMenuItem(
@@ -274,40 +323,35 @@ private fun TrackMenuItem(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
-    DropdownMenuItem(
-        text = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = text,
-                    tint = if (enabled) Color.White else Color(0xFF808080),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Normal
-                    ),
-                    color = if (enabled) Color.White else Color(0xFF808080)
-                )
-            }
-        },
+    Surface(
         onClick = onClick,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-        colors = MenuDefaults.itemColors(
-            textColor = Color.White,
-            disabledTextColor = Color(0xFF808080)
-        )
-    )
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.Transparent,
+        enabled = enabled
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = text,
+                tint = if (enabled) Color.White else Color(0xFF666666),
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(18.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Normal
+                ),
+                color = if (enabled) Color.White else Color(0xFF666666)
+            )
+        }
+    }
 }
 
 /**
