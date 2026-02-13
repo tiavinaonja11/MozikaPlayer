@@ -28,17 +28,14 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    // ✅ AJOUT : ViewModel pour restaurer l'état du player
     private val playerVM: PlayerVM by viewModels()
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            println("DEBUG - Permission audio accordée")
             startPlaybackService()
         } else {
-            println("DEBUG - Permission audio refusée")
             showPermissionDeniedWarning()
             startPlaybackService()
         }
@@ -49,16 +46,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Garder l'écran allumé pendant la lecture
-        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        // ✅ CRITIQUE : Créer le canal de notification au démarrage
+        // Canal de notification au démarrage
         CustomNotificationProvider.createNotificationChannel(this)
 
-        // Vérifier et demander les permissions
+        //  Vérifier et demander les permissions
         checkAndRequestPermissions()
 
-        // ✅ AJOUT : Restaurer l'état du player au démarrage
+        //  Restaurer l'état du player sans relancer la lecture
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             playerVM.restorePlayerState()
         }
@@ -70,10 +64,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        //  Garder l'écran allumé uniquement quand l'app est au premier plan
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onStop() {
+        super.onStop()
+        //  Libérer le flag écran — la musique continue via PlaybackService (foreground)
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        //  Sauvegarder position/état avant de passer en arrière-plan
+        playerVM.savePlayerState()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        // Nettoyage des flags d'écran allumé
-        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     private fun checkAndRequestPermissions() {
@@ -85,34 +92,27 @@ class MainActivity : ComponentActivity() {
             }
             requestPermissionLauncher.launch(permission)
         } else {
-            println("DEBUG - Permission audio déjà accordée")
             startPlaybackService()
         }
     }
 
     private fun showPermissionDeniedWarning() {
-        println("Avertissement: Permission audio refusée. Certaines fonctionnalités peuvent être limitées.")
+        println("Avertissement: Permission audio refusée.")
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun startPlaybackService() {
         try {
-            println("DEBUG - Démarrage de PlaybackService")
             val serviceIntent = Intent(this, PlaybackService::class.java)
-
             if (!isPlaybackServiceRunning()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
                 } else {
                     startService(serviceIntent)
                 }
-                println("DEBUG - Service démarré avec succès")
-            } else {
-                println("DEBUG - Service déjà en cours d'exécution")
             }
-
         } catch (e: Exception) {
-            println("DEBUG - Erreur lors du démarrage du service: ${e.message}")
+            println("DEBUG - Erreur service: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -130,8 +130,6 @@ class MainActivity : ComponentActivity() {
 @OptIn(UnstableApi::class)
 @Composable
 fun MainApp() {
-    val context = LocalContext.current
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -146,10 +144,7 @@ fun StartPlaybackServiceIfNeeded() {
     val context = LocalContext.current
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (!PermissionHelper.hasAudioPermission(context)) {
-            return@LaunchedEffect
-        }
-
+        if (!PermissionHelper.hasAudioPermission(context)) return@LaunchedEffect
         try {
             val serviceIntent = Intent(context, PlaybackService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -158,7 +153,7 @@ fun StartPlaybackServiceIfNeeded() {
                 context.startService(serviceIntent)
             }
         } catch (e: Exception) {
-            println("Erreur dans StartPlaybackServiceIfNeeded: ${e.message}")
+            println("Erreur StartPlaybackServiceIfNeeded: ${e.message}")
         }
     }
 }

@@ -3,10 +3,8 @@ package com.example.mozika.ui.components
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,10 +34,20 @@ import com.example.mozika.ui.player.PlayerVM
 import kotlinx.coroutines.launch
 import java.io.File
 
+// 🎨 Couleurs Cyan
+private val Cyan        = Color(0xFF22D3EE)
+private val CyanDim     = Color(0xFF22D3EE).copy(alpha = 0.15f)
+private val CyanDim08   = Color(0xFF22D3EE).copy(alpha = 0.08f)
+private val BgSheet     = Color(0xFF0D0D0D)
+private val BgCard      = Color(0xFF161616)
+private val BgItem      = Color(0xFF1A1A1A)
+private val DividerColor = Color(0xFF252525)
+private val TextPrimary  = Color.White
+private val TextSecondary = Color(0xFF888888)
+
 /**
- * Menu d'options pour une chanson - VERSION BOTTOM SHEET
+ * Menu d'options pour une chanson — BottomSheet thème Cyan
  */
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackOptionsMenu(
@@ -57,166 +65,170 @@ fun TrackOptionsMenu(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
-    var showInfoDialog by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showInfoDialog     by remember { mutableStateOf(false) }
+    var showEditDialog     by remember { mutableStateOf(false) }
+    var showDeleteConfirm  by remember { mutableStateOf(false) }
 
     if (expanded) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            containerColor = Color(0xFF1E1E1E),
+            containerColor = BgSheet,
             dragHandle = {
-                BottomSheetDefaults.DragHandle(color = Color(0xFF555555))
-            }
-        ) {
-            // Header : infos de la chanson
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF1DB954).copy(alpha = 0.3f),
-                                    Color(0xFF1DB954).copy(alpha = 0.1f)
-                                )
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.MusicNote,
-                        contentDescription = null,
-                        tint = Color(0xFF1DB954),
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        ),
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = track.artist,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        color = Color(0xFFB3B3B3),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        .padding(top = 12.dp, bottom = 8.dp)
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFF333333))
+                )
             }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
 
-            HorizontalDivider(color = Color(0xFF333333), thickness = 0.5.dp)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Options
-            TrackMenuItem(
-                icon = Icons.Outlined.PlayArrow,
-                text = "Lire la suite",
-                onClick = {
-                    onDismiss()
-                    playerVM.playNext(track)
-                    Toast.makeText(context, "Sera lu ensuite", Toast.LENGTH_SHORT).show()
+                // ── Header chanson ──────────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(BgCard)
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(Cyan.copy(alpha = 0.25f), Cyan.copy(alpha = 0.08f))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.MusicNote, null,
+                            tint = Cyan,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = track.title,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Bold, fontSize = 15.sp
+                            ),
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = track.artist,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(CyanDim)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.GraphicEq, null,
+                            tint = Cyan,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
-            )
 
-            TrackMenuItem(
-                icon = Icons.Outlined.PlaylistAdd,
-                text = "Ajouter à la Liste",
-                onClick = {
-                    onDismiss()
-                    playerVM.addToQueue(track)
-                    Toast.makeText(context, "Ajouté à la file d'attente", Toast.LENGTH_SHORT).show()
-                }
-            )
+                // ── Groupe Lecture ──────────────────────────────
+                MenuGroupLabel("Lecture")
+                TrackMenuItem(
+                    icon = Icons.Outlined.SkipNext,
+                    text = "Lire la suite",
+                    onClick = {
+                        onDismiss()
+                        playerVM.playNext(track)
+                        Toast.makeText(context, "Sera lu ensuite", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                TrackMenuItem(
+                    icon = Icons.Outlined.AddToQueue,
+                    text = "Ajouter à la Liste",
+                    onClick = {
+                        onDismiss()
+                        playerVM.addToQueue(track)
+                        Toast.makeText(context, "Ajouté à la file d'attente", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                TrackMenuItem(
+                    icon = Icons.Outlined.LibraryAdd,
+                    text = "Ajouter à la Playlist",
+                    onClick = { showPlaylistDialog = true; onDismiss() }
+                )
 
-            TrackMenuItem(
-                icon = Icons.Outlined.LibraryAdd,
-                text = "Ajouter à la Playlist",
-                onClick = {
-                    showPlaylistDialog = true
-                    onDismiss()
-                }
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    color = DividerColor, thickness = 0.5.dp,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
 
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                thickness = 0.5.dp,
-                color = Color(0xFF333333)
-            )
+                // ── Groupe Partage ──────────────────────────────
+                MenuGroupLabel("Partage & Édition")
+                TrackMenuItem(
+                    icon = Icons.Outlined.Share,
+                    text = "Partager",
+                    onClick = { onDismiss(); shareTrack(context, track) }
+                )
+                TrackMenuItem(
+                    icon = Icons.Outlined.Edit,
+                    text = "Modifier",
+                    onClick = { onDismiss(); showEditDialog = true }
+                )
 
-            TrackMenuItem(
-                icon = Icons.Outlined.Share,
-                text = "Partager",
-                onClick = {
-                    onDismiss()
-                    shareTrack(context, track)
-                }
-            )
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(
+                    color = DividerColor, thickness = 0.5.dp,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
 
-            TrackMenuItem(
-                icon = Icons.Outlined.Edit,
-                text = "Modifier",
-                onClick = {
-                    onDismiss()
-                    showEditDialog = true
-                }
-            )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                thickness = 0.5.dp,
-                color = Color(0xFF333333)
-            )
-
-            TrackMenuItem(
-                icon = Icons.Outlined.Info,
-                text = "Information",
-                onClick = {
-                    onDismiss()
-                    showInfoDialog = true
-                }
-            )
-
-            TrackMenuItem(
-                icon = Icons.Outlined.Notifications,
-                text = "Faire comme sonnerie",
-                onClick = {
-                    onDismiss()
-                    setAsRingtone(context, track)
-                }
-            )
-
-            TrackMenuItem(
-                icon = Icons.Outlined.VisibilityOff,
-                text = "Masquer",
-                onClick = {
-                    onDismiss()
-                    showDeleteConfirm = true
-                }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+                // ── Groupe Autres ───────────────────────────────
+                MenuGroupLabel("Autres")
+                TrackMenuItem(
+                    icon = Icons.Outlined.Info,
+                    text = "Information",
+                    onClick = { onDismiss(); showInfoDialog = true }
+                )
+                TrackMenuItem(
+                    icon = Icons.Outlined.NotificationsActive,
+                    text = "Faire comme sonnerie",
+                    onClick = { onDismiss(); setAsRingtone(context, track) }
+                )
+                TrackMenuItem(
+                    icon = Icons.Outlined.VisibilityOff,
+                    text = "Masquer",
+                    tint = Color(0xFFFF6B6B),
+                    onClick = { onDismiss(); showDeleteConfirm = true }
+                )
+            }
         }
     }
 
-    // Dialog pour sélectionner/créer une playlist
+    // ── Dialogs ─────────────────────────────────────────────
+
     if (showPlaylistDialog) {
         AddToPlaylistDialog(
             track = track,
@@ -226,18 +238,10 @@ fun TrackOptionsMenu(
                 scope.launch {
                     val isAlreadyIn = playlistVM.isTrackInPlaylist(playlist.id, track.id)
                     if (isAlreadyIn) {
-                        Toast.makeText(
-                            context,
-                            "Déjà dans ${playlist.name}",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, "Déjà dans ${playlist.name}", Toast.LENGTH_SHORT).show()
                     } else {
                         playlistVM.addTrackToPlaylist(playlist.id, track.id)
-                        Toast.makeText(
-                            context,
-                            "Ajouté à ${playlist.name}",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, "Ajouté à ${playlist.name}", Toast.LENGTH_SHORT).show()
                     }
                 }
                 showPlaylistDialog = false
@@ -245,118 +249,113 @@ fun TrackOptionsMenu(
         )
     }
 
-    // Dialog d'informations
     if (showInfoDialog) {
-        TrackInfoDialog(
-            track = track,
-            onDismiss = { showInfoDialog = false }
-        )
+        TrackInfoDialog(track = track, onDismiss = { showInfoDialog = false })
     }
 
-    // Dialog d'édition
     if (showEditDialog) {
         TrackEditDialog(
             track = track,
             onDismiss = { showEditDialog = false },
-            onSave = { newTitle, newArtist, newAlbum ->
-                // TODO: Implémenter la sauvegarde dans la base de données
-                Toast.makeText(
-                    context,
-                    "Modifications enregistrées",
-                    Toast.LENGTH_SHORT
-                ).show()
+            onSave = { _, _, _ ->
+                Toast.makeText(context, "Modifications enregistrées", Toast.LENGTH_SHORT).show()
                 showEditDialog = false
             }
         )
     }
 
-    // Confirmation de masquage
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = {
-                Text(
-                    text = "Masquer la chanson",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "Cette chanson n'apparaîtra plus dans votre bibliothèque.",
-                    color = Color(0xFFB3B3B3)
-                )
-            },
+            title = { Text("Masquer la chanson", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("Cette chanson n'apparaîtra plus dans votre bibliothèque.", color = TextSecondary) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        // TODO: Implémenter le masquage dans la BDD
-                        Toast.makeText(
-                            context,
-                            "Chanson masquée",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        showDeleteConfirm = false
-                        onTrackRemoved?.invoke()
-                    }
-                ) {
-                    Text("Masquer", color = Color(0xFFFF6B6B))
-                }
+                TextButton(onClick = {
+                    Toast.makeText(context, "Chanson masquée", Toast.LENGTH_SHORT).show()
+                    showDeleteConfirm = false
+                    onTrackRemoved?.invoke()
+                }) { Text("Masquer", color = Color(0xFFFF6B6B)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Annuler", color = Color.White)
-                }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Annuler", color = Cyan) }
             },
-            containerColor = Color(0xFF282828)
+            containerColor = BgCard
         )
     }
 }
 
-/**
- * Item de menu pour le BottomSheet
- */
+// ── Composants privés ────────────────────────────────────────────────────
+
+@Composable
+private fun MenuGroupLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.2.sp
+        ),
+        color = Cyan.copy(alpha = 0.6f),
+        modifier = Modifier.padding(start = 20.dp, bottom = 4.dp)
+    )
+}
+
 @Composable
 private fun TrackMenuItem(
     icon: ImageVector,
     text: String,
     onClick: () -> Unit,
+    tint: Color = TextPrimary,
     enabled: Boolean = true
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(12.dp),
         color = Color.Transparent,
         enabled = enabled
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = text,
-                tint = if (enabled) Color.White else Color(0xFF666666),
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(18.dp))
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (tint == TextPrimary) CyanDim08 else tint.copy(alpha = 0.1f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = text,
+                    tint = if (enabled) {
+                        if (tint == TextPrimary) Cyan.copy(alpha = 0.85f) else tint
+                    } else TextSecondary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyLarge.copy(
+                style = MaterialTheme.typography.bodyMedium.copy(
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Normal
+                    fontWeight = FontWeight.Medium
                 ),
-                color = if (enabled) Color.White else Color(0xFF666666)
+                color = if (enabled) tint else TextSecondary
             )
         }
     }
 }
 
-/**
- * Dialog d'édition des métadonnées
- */
+// ── Dialogs ──────────────────────────────────────────────────────────────
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TrackEditDialog(
@@ -364,154 +363,121 @@ private fun TrackEditDialog(
     onDismiss: () -> Unit,
     onSave: (title: String, artist: String, album: String) -> Unit
 ) {
-    var title by remember { mutableStateOf(track.title) }
+    var title  by remember { mutableStateOf(track.title) }
     var artist by remember { mutableStateOf(track.artist) }
-    var album by remember { mutableStateOf(track.album) }
+    var album  by remember { mutableStateOf(track.album) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF282828)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-            ) {
-                Text(
-                    text = "Modifier la chanson",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Champ Titre
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Titre", color = Color(0xFFB3B3B3)) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF1DB954),
-                        unfocusedBorderColor = Color(0xFF404040),
-                        cursorColor = Color(0xFF1DB954)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Champ Artiste
-                OutlinedTextField(
-                    value = artist,
-                    onValueChange = { artist = it },
-                    label = { Text("Artiste", color = Color(0xFFB3B3B3)) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF1DB954),
-                        unfocusedBorderColor = Color(0xFF404040),
-                        cursorColor = Color(0xFF1DB954)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Champ Album
-                OutlinedTextField(
-                    value = album,
-                    onValueChange = { album = it },
-                    label = { Text("Album", color = Color(0xFFB3B3B3)) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF1DB954),
-                        unfocusedBorderColor = Color(0xFF404040),
-                        cursorColor = Color(0xFF1DB954)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+    AlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = BgCard) {
+            Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CyanDim),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Edit, null, tint = Cyan, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Modifier la chanson",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
+                }
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Annuler", color = Color.White)
-                    }
+                val fields = listOf(
+                    Triple("Titre", title) { v: String -> title = v },
+                    Triple("Artiste", artist) { v: String -> artist = v },
+                    Triple("Album", album) { v: String -> album = v }
+                )
+                fields.forEach { (label, value, onChange) ->
+                    OutlinedTextField(
+                        value = value,
+                        onValueChange = onChange,
+                        label = { Text(label, color = TextSecondary, fontSize = 13.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedBorderColor = Cyan,
+                            unfocusedBorderColor = Color(0xFF333333),
+                            cursorColor = Cyan,
+                            focusedLabelColor = Cyan
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("Annuler", color = TextSecondary) }
                     Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(
+                    Button(
                         onClick = { onSave(title, artist, album) },
-                        enabled = title.isNotBlank()
-                    ) {
-                        Text(
-                            "Enregistrer",
-                            color = if (title.isNotBlank()) Color(0xFF1DB954) else Color(0xFF808080)
-                        )
-                    }
+                        enabled = title.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Cyan, contentColor = Color.Black),
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text("Enregistrer", fontWeight = FontWeight.Bold) }
                 }
             }
         }
     }
 }
 
-/**
- * Dialog d'informations
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrackInfoDialog(
-    track: Track,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF282828)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-            ) {
-                Text(
-                    text = "Informations",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                InfoRow("Titre", track.title)
-                InfoRow("Artiste", track.artist)
-                InfoRow("Album", track.album)
-                InfoRow("Durée", formatDuration(track.duration))
-                InfoRow("Chemin", track.data)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Fermer", color = Color(0xFF1DB954))
+private fun TrackInfoDialog(track: Track, onDismiss: () -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = BgCard) {
+            Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CyanDim),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Info, null, tint = Cyan, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Informations",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
                 }
+                Spacer(modifier = Modifier.height(20.dp))
+
+                val rows = listOf(
+                    "Titre" to track.title,
+                    "Artiste" to track.artist,
+                    "Album" to track.album,
+                    "Durée" to formatDuration(track.duration),
+                    "Chemin" to track.data
+                )
+                rows.forEachIndexed { index, (label, value) ->
+                    InfoRow(label, value)
+                    if (index < rows.lastIndex) {
+                        HorizontalDivider(
+                            color = DividerColor, thickness = 0.5.dp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End),
+                    colors = ButtonDefaults.buttonColors(containerColor = CyanDim, contentColor = Cyan),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Fermer", fontWeight = FontWeight.SemiBold) }
             }
         }
     }
@@ -519,30 +485,21 @@ private fun TrackInfoDialog(
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF808080),
-            fontSize = 12.sp
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, letterSpacing = 0.8.sp),
+            color = Cyan.copy(alpha = 0.7f)
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
-            fontSize = 14.sp
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+            color = TextPrimary
         )
     }
 }
 
-/**
- * Dialog pour ajouter à une playlist
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddToPlaylistDialog(
@@ -553,222 +510,194 @@ private fun AddToPlaylistDialog(
 ) {
     val playlistVM: PlaylistVM = hiltViewModel()
     var showCreatePlaylist by remember { mutableStateOf(false) }
-    var newPlaylistName by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
+    var newPlaylistName    by remember { mutableStateOf("") }
+    val scope   = rememberCoroutineScope()
     val context = LocalContext.current
 
-    AlertDialog(
-        onDismissRequest = onDismiss
-    ) {
+    AlertDialog(onDismissRequest = onDismiss) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 500.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF282828)
+            modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = BgCard
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-            ) {
-                Text(
-                    text = "Ajouter à une playlist",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    ),
-                    color = Color.White
-                )
-
+            Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CyanDim),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.LibraryAdd, null, tint = Cyan, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "Ajouter à une playlist",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Bouton créer nouvelle playlist
                 Surface(
                     onClick = { showCreatePlaylist = true },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF1DB954).copy(alpha = 0.15f)
+                    shape = RoundedCornerShape(12.dp),
+                    color = CyanDim
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = "Créer",
-                            tint = Color(0xFF1DB954),
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Icon(Icons.Rounded.Add, null, tint = Cyan, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Créer une nouvelle playlist",
+                            "Créer une nouvelle playlist",
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp
+                                fontWeight = FontWeight.SemiBold, fontSize = 14.sp
                             ),
-                            color = Color(0xFF1DB954)
+                            color = Cyan
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Liste des playlists
                 if (playlists.isNotEmpty()) {
                     Text(
-                        text = "Mes playlists",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 13.sp
+                        "MES PLAYLISTS",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 10.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.Bold
                         ),
-                        color = Color(0xFFB3B3B3),
+                        color = Cyan.copy(alpha = 0.6f),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
+                        modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(playlists) { playlist ->
                             Surface(
                                 onClick = { onPlaylistSelected(playlist) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color.Transparent
+                                shape = RoundedCornerShape(10.dp),
+                                color = BgItem
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.PlaylistPlay,
-                                        contentDescription = null,
-                                        tint = Color(0xFFB3B3B3),
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(CyanDim08),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.PlaylistPlay, null,
+                                            tint = Cyan.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = playlist.name,
+                                            playlist.name,
                                             style = MaterialTheme.typography.bodyMedium.copy(
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.Normal
+                                                fontSize = 14.sp, fontWeight = FontWeight.Medium
                                             ),
-                                            color = Color.White,
-                                            maxLines = 1
+                                            color = TextPrimary, maxLines = 1
                                         )
                                         Text(
-                                            text = "${playlist.songCount} chansons",
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontSize = 12.sp
-                                            ),
-                                            color = Color(0xFF808080)
+                                            "${playlist.songCount} chansons",
+                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                            color = TextSecondary
                                         )
                                     }
+                                    Icon(
+                                        Icons.Rounded.ChevronRight, null,
+                                        tint = Cyan.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Annuler", color = Color(0xFF1DB954))
+                Spacer(modifier = Modifier.height(12.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("Annuler", color = TextSecondary)
                 }
             }
         }
     }
 
-    // Dialog pour créer une nouvelle playlist
     if (showCreatePlaylist) {
         AlertDialog(
             onDismissRequest = { showCreatePlaylist = false },
-            title = {
-                Text(
-                    text = "Nouvelle playlist",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
+            title = { Text("Nouvelle playlist", color = TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
-                    label = { Text("Nom", color = Color(0xFFB3B3B3)) },
+                    label = { Text("Nom", color = TextSecondary) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF1DB954),
-                        unfocusedBorderColor = Color(0xFF404040),
-                        cursorColor = Color(0xFF1DB954)
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = Cyan,
+                        unfocusedBorderColor = Color(0xFF333333),
+                        cursorColor = Cyan,
+                        focusedLabelColor = Cyan
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         if (newPlaylistName.isNotBlank()) {
                             scope.launch {
-                                val newPlaylistId = playlistVM.create(newPlaylistName)
+                                val id = playlistVM.create(newPlaylistName)
                                 kotlinx.coroutines.delay(200)
-                                playlistVM.addTrackToPlaylist(newPlaylistId, track.id)
-                                Toast.makeText(
-                                    context,
-                                    "Créé et ajouté",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                playlistVM.addTrackToPlaylist(id, track.id)
+                                Toast.makeText(context, "Créé et ajouté", Toast.LENGTH_SHORT).show()
                             }
                             newPlaylistName = ""
                             showCreatePlaylist = false
                             onDismiss()
                         }
                     },
-                    enabled = newPlaylistName.isNotBlank()
-                ) {
-                    Text(
-                        "Créer",
-                        color = if (newPlaylistName.isNotBlank()) Color(0xFF1DB954) else Color(0xFF808080)
-                    )
-                }
+                    enabled = newPlaylistName.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Cyan, contentColor = Color.Black),
+                    shape = RoundedCornerShape(10.dp)
+                ) { Text("Créer", fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
                 TextButton(onClick = { showCreatePlaylist = false }) {
-                    Text("Annuler", color = Color.White)
+                    Text("Annuler", color = TextSecondary)
                 }
             },
-            containerColor = Color(0xFF282828)
+            containerColor = BgCard
         )
     }
 }
 
-/**
- * Partager une chanson
- */
+// ── Fonctions utilitaires ────────────────────────────────────────────────
+
 private fun shareTrack(context: android.content.Context, track: Track) {
-    val shareIntent = Intent().apply {
+    val intent = Intent().apply {
         action = Intent.ACTION_SEND
         type = "text/plain"
         putExtra(Intent.EXTRA_SUBJECT, "Écoute cette chanson !")
         putExtra(Intent.EXTRA_TEXT, "${track.title} - ${track.artist}\nAlbum: ${track.album}")
     }
-    context.startActivity(Intent.createChooser(shareIntent, "Partager via"))
+    context.startActivity(Intent.createChooser(intent, "Partager via"))
 }
 
-/**
- * Définir comme sonnerie
- */
 private fun setAsRingtone(context: android.content.Context, track: Track) {
     try {
         val file = File(track.data)
@@ -776,25 +705,17 @@ private fun setAsRingtone(context: android.content.Context, track: Track) {
             Toast.makeText(context, "Fichier introuvable", Toast.LENGTH_SHORT).show()
             return
         }
-
         if (!Settings.System.canWrite(context)) {
-            Toast.makeText(
-                context,
-                "Permission requise",
-                Toast.LENGTH_LONG
-            ).show()
-            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
-                data = Uri.parse("package:${context.packageName}")
-            }
-            context.startActivity(intent)
+            Toast.makeText(context, "Permission requise", Toast.LENGTH_LONG).show()
+            context.startActivity(
+                Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+            )
             return
         }
-
-        val uri = Uri.fromFile(file)
         RingtoneManager.setActualDefaultRingtoneUri(
-            context,
-            RingtoneManager.TYPE_RINGTONE,
-            uri
+            context, RingtoneManager.TYPE_RINGTONE, Uri.fromFile(file)
         )
         Toast.makeText(context, "Sonnerie définie", Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
@@ -804,7 +725,5 @@ private fun setAsRingtone(context: android.content.Context, track: Track) {
 
 private fun formatDuration(milliseconds: Int): String {
     val seconds = milliseconds / 1000
-    val minutes = seconds / 60
-    val remainingSeconds = seconds % 60
-    return String.format("%d:%02d", minutes, remainingSeconds)
+    return String.format("%d:%02d", seconds / 60, seconds % 60)
 }

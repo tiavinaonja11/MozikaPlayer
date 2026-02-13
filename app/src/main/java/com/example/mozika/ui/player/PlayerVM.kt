@@ -114,6 +114,13 @@ class PlayerVM @Inject constructor(
     var duration by mutableLongStateOf(0L)
         private set
 
+    // ✅ FIX FLUIDITÉ : StateFlow pour recompose ciblé (seekbar uniquement, pas tout l'écran)
+    private val _position = MutableStateFlow(0L)
+    val positionFlow: StateFlow<Long> = _position.asStateFlow()
+
+    private val _duration = MutableStateFlow(0L)
+    val durationFlow: StateFlow<Long> = _duration.asStateFlow()
+
     var isPlaying by mutableStateOf(false)
         private set
 
@@ -191,41 +198,60 @@ class PlayerVM @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun load(trackId: Long, autoPlay: Boolean = true) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
             try {
-                // 1. On cherche l'index dans la playlist (qui contient des DomainTrack)
                 val trackIndex = playlist.indexOfFirst { it.id == trackId }
                 if (trackIndex == -1) return@launch
 
-                // 2. ✅ CORRECTION: Préparation des MediaItems avec métadonnées COMPLÈTES
-                val mediaItems = playlist.map { track ->
-                    createMediaItemWithCompleteMetadata(track)
+                val selectedTrack: DomainTrack = playlist[trackIndex]
+
+                // ✅ UI mise à jour immédiatement
+                currentTrack = selectedTrack
+                _currentTrackFlow.value = selectedTrack
+                updatePlayerStateFlow()
+
+                // ✅ OPTIMISATION 1: Créer seulement la piste actuelle avec métadonnées complètes
+                val currentMediaItem = createMediaItemWithCompleteMetadata(selectedTrack)
+
+                // ✅ Les autres pistes SANS métadonnées (URI seulement) - TRÈS RAPIDE
+                val otherMediaItems = playlist.mapIndexed { index, track ->
+                    if (index == trackIndex) {
+                        currentMediaItem
+                    } else {
+                        // Version ultra-légère - pas d'extraction de pochette
+                        MediaItem.Builder()
+                            .setMediaId(track.id.toString())
+                            .setUri(Uri.parse(track.data))
+                            .setMediaMetadata(
+                                MediaMetadata.Builder()
+                                    .setTitle(track.title)
+                                    .setArtist(track.artist)
+                                    .setIsPlayable(true)
+                                    .build()
+                            )
+                            .build()
+                    }
                 }
 
-                withContext(Dispatchers.Main) {
-                    // 3. Charger la liste complète dans le player (active les boutons Suivant/Précédent)
-                    mediaSession.player.setMediaItems(mediaItems)
-                    mediaSession.player.seekTo(trackIndex, 0L)
-                    mediaSession.player.prepare()
+                // ✅ Démarrer la lecture immédiatement
+                mediaSession.player.setMediaItems(otherMediaItems)
+                mediaSession.player.seekTo(trackIndex, 0L)
+                mediaSession.player.prepare()
+                if (autoPlay) mediaSession.player.play()
 
-                    if (autoPlay) mediaSession.player.play()
-
-                    // 4. RÉSOLUTION DES ERREURS DE TYPE
-                    val selectedTrack: DomainTrack = playlist[trackIndex]
-
-                    // On assigne le DomainTrack aux deux variables
-                    currentTrack = selectedTrack
-                    _currentTrackFlow.value = selectedTrack
-
-                    // Génération de la waveform
-                    generateWaveformForTrack(selectedTrack.data)
+                // ✅ CORRECTION CRITIQUE: Waveform et stats en arrière-plan APRÈS
+                launch(Dispatchers.IO) {
+                    try {
+                        generateWaveformForTrack(selectedTrack.data)
+                        playlistRepo.incrementPlayCount(trackId)
+                    } catch (e: Exception) {
+                        println("⚠️ DEBUG - Erreur background tasks: ${e.message}")
+                    }
                 }
-
-                // 5. Incrémenter le compteur de lecture (hors withContext)
-                playlistRepo.incrementPlayCount(trackId)
 
             } catch (e: Exception) {
                 println("❌ Erreur de chargement : ${e.message}")
+                e.printStackTrace()
             }
         }
     }
@@ -634,8 +660,12 @@ class PlayerVM @Inject constructor(
         updateJob = viewModelScope.launch {
             while (true) {
                 if (mediaSession.player.isPlaying) {
-                    position = mediaSession.player.currentPosition.coerceAtLeast(0L)
-                    duration = mediaSession.player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+                    val pos = mediaSession.player.currentPosition.coerceAtLeast(0L)
+                    val dur = mediaSession.player.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+                    _position.value = pos
+                    _duration.value = dur
+                    position = pos
+                    duration = dur
                 }
                 delay(100)
             }

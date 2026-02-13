@@ -72,18 +72,17 @@ fun PlayerScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
-    // Utiliser une clé dérivée pour éviter les rechargements
-    val shouldLoadTrack by remember(trackId) {
-        derivedStateOf {
-            trackId != null && vm.currentTrack?.id != trackId
+    // ✅ FIX INSTANTANÉ : charger directement sans LaunchedEffect intermédiaire
+    // Le trackId change → on charge immédiatement via vm.load()
+    LaunchedEffect(trackId) {
+        if (trackId != null && vm.currentTrack?.id != trackId) {
+            vm.load(trackId, autoPlay = true)
         }
     }
 
-    LaunchedEffect(shouldLoadTrack) {
-        if (shouldLoadTrack && trackId != null) {
-            vm.load(trackId)
-        }
-    }
+    // ✅ FIX FLUIDITÉ : observer position/duration via StateFlow → recompose ciblé seekbar uniquement
+    val position by vm.positionFlow.collectAsState()
+    val duration by vm.durationFlow.collectAsState()
 
     if (trackId == null) {
         EmptyPlayerScreen(navController)
@@ -236,15 +235,13 @@ fun PlayerScreen(
             // WAVEFORM compacte
             PremiumAudioWaveform(
                 amplitudes = vm.waveform,
-                progress = if (vm.duration > 0L)
-                    vm.position.toFloat() / vm.duration.toFloat()
-                else 0f,
+                progress = if (duration > 0L) position.toFloat() / duration.toFloat() else 0f,
                 isPlaying = vm.isPlaying,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(80.dp),
                 onSeek = { percent ->
-                    vm.seekTo((percent * vm.duration).toLong())
+                    vm.seekTo((percent * duration).toLong())
                 }
             )
 
@@ -258,10 +255,10 @@ fun PlayerScreen(
             ) {
                 Box(modifier = Modifier.height(20.dp)) {
                     SeekBar(
-                        progress = vm.position.toFloat(),
-                        duration = vm.duration.toFloat(),
+                        progress = position.toFloat(),
+                        duration = duration.toFloat(),
                         onSeek = { percent ->
-                            vm.seekTo((percent * vm.duration).toLong())
+                            vm.seekTo((percent * duration).toLong())
                         }
                     )
                 }
@@ -273,7 +270,7 @@ fun PlayerScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = formatTime(vm.position),
+                        text = formatTime(position),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
@@ -281,7 +278,7 @@ fun PlayerScreen(
                         color = Color(0xFF999999)
                     )
                     Text(
-                        text = formatTime(vm.duration),
+                        text = formatTime(duration),
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
