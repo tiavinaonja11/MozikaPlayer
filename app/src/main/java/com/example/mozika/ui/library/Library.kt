@@ -22,9 +22,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
@@ -42,14 +45,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
-// Couleurs
+// 🎨 Couleurs Premium
 val CyanPrimary = Color(0xFF22D3EE)
+val CyanSecondary = Color(0xFF06B6D4)
 val CyanAlpha15 = Color(0xFF22D3EE).copy(alpha = 0.15f)
 val CyanAlpha20 = Color(0xFF22D3EE).copy(alpha = 0.20f)
 val CyanAlpha12 = Color(0xFF22D3EE).copy(alpha = 0.12f)
 val BackgroundBlack = Color(0xFF000000)
 val CardBlack = Color(0xFF141414)
 val SurfaceBlack = Color(0xFF0A0A0A)
+val SurfaceElevated = Color(0xFF1A1A1A)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,7 +93,6 @@ fun LibraryScreen(
         }
     }
 
-    // Focus sur la barre de recherche quand elle apparaît
     LaunchedEffect(isSearchVisible) {
         if (isSearchVisible) {
             delay(100)
@@ -105,7 +109,14 @@ fun LibraryScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(BackgroundBlack)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    BackgroundBlack,
+                                    BackgroundBlack.copy(alpha = 0.98f)
+                                )
+                            )
+                        )
                         .padding(top = 8.dp, bottom = 4.dp)
                 ) {
                     // Ligne supérieure avec titre ou recherche
@@ -121,34 +132,43 @@ fun LibraryScreen(
                                 text = "Musique",
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 28.sp,
-                                    letterSpacing = (-0.5).sp
+                                    fontSize = 32.sp,
+                                    letterSpacing = (-0.8).sp
                                 ),
                                 color = Color.White
                             )
                         } else {
-                            // Barre de recherche fonctionnelle
+                            // Barre de recherche premium
                             Surface(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(44.dp),
-                                shape = RoundedCornerShape(22.dp),
-                                color = CardBlack,
-                                tonalElevation = 0.dp
+                                    .height(48.dp)
+                                    .shadow(4.dp, RoundedCornerShape(24.dp)),
+                                shape = RoundedCornerShape(24.dp),
+                                color = SurfaceElevated,
+                                tonalElevation = 2.dp
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 16.dp),
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    SurfaceElevated,
+                                                    CardBlack
+                                                )
+                                            )
+                                        )
+                                        .padding(horizontal = 18.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         Icons.Rounded.Search,
                                         contentDescription = null,
-                                        tint = Color(0xFF666666),
-                                        modifier = Modifier.size(20.dp)
+                                        tint = CyanPrimary.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(22.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Spacer(modifier = Modifier.width(14.dp))
 
                                     BasicTextField(
                                         value = query,
@@ -159,7 +179,7 @@ fun LibraryScreen(
                                         textStyle = TextStyle(
                                             color = Color.White,
                                             fontSize = 15.sp,
-                                            fontWeight = FontWeight.Normal
+                                            fontWeight = FontWeight.Medium
                                         ),
                                         cursorBrush = SolidColor(CyanPrimary),
                                         singleLine = true,
@@ -172,7 +192,7 @@ fun LibraryScreen(
                                                 if (query.isEmpty()) {
                                                     Text(
                                                         text = "Rechercher chansons, artistes...",
-                                                        color = Color(0xFF666666),
+                                                        color = Color(0xFF777777),
                                                         fontSize = 15.sp
                                                     )
                                                 }
@@ -184,13 +204,13 @@ fun LibraryScreen(
                                     if (query.isNotEmpty()) {
                                         IconButton(
                                             onClick = { viewModel.clearQuery() },
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(28.dp)
                                         ) {
                                             Icon(
                                                 Icons.Rounded.Close,
                                                 contentDescription = "Effacer",
-                                                tint = Color(0xFF666666),
-                                                modifier = Modifier.size(18.dp)
+                                                tint = Color(0xFF888888),
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
@@ -199,10 +219,11 @@ fun LibraryScreen(
                         }
 
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(
+                            // Bouton recherche/fermer avec animation
+                            Surface(
                                 onClick = {
                                     isSearchVisible = !isSearchVisible
                                     if (!isSearchVisible) {
@@ -210,100 +231,87 @@ fun LibraryScreen(
                                         focusManager.clearFocus()
                                     }
                                 },
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(44.dp),
+                                shape = CircleShape,
+                                color = if (isSearchVisible) CyanAlpha15 else Color.Transparent
                             ) {
-                                Icon(
-                                    imageVector = if (isSearchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
-                                    contentDescription = "Rechercher",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = if (isSearchVisible) Icons.Rounded.Close else Icons.Rounded.Search,
+                                        contentDescription = "Rechercher",
+                                        tint = if (isSearchVisible) CyanPrimary else Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
 
                             if (!isSearchVisible) {
-                                IconButton(
+                                Surface(
                                     onClick = { viewModel.scanTracks() },
                                     enabled = !isScanning,
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(44.dp),
+                                    shape = CircleShape,
+                                    color = if (isScanning) CyanAlpha15 else Color.Transparent
                                 ) {
-                                    if (isScanning) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = CyanPrimary,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Refresh,
-                                            contentDescription = "Scanner",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                    Box(contentAlignment = Alignment.Center) {
+                                        if (isScanning) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(22.dp),
+                                                color = CyanPrimary,
+                                                strokeWidth = 2.5.dp
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Refresh,
+                                                contentDescription = "Scanner",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
 
-                    // Filtres chips (Chansons, Albums, Artistes)
+                    // Filter Chips améliorés
                     if (!isSearchVisible) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            FilterChip(
+                            PremiumFilterChip(
                                 selected = selectedTab == 0,
                                 onClick = {
                                     selectedTab = 0
                                     coroutineScope.launch { pagerState.animateScrollToPage(0) }
                                 },
-                                label = { Text("Chansons") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = CyanAlpha15,
-                                    selectedLabelColor = CyanPrimary,
-                                    containerColor = CardBlack,
-                                    labelColor = Color(0xFF888888)
-                                ),
-                                border = null
+                                label = "Chansons"
                             )
 
-                            FilterChip(
+                            PremiumFilterChip(
                                 selected = selectedTab == 1,
                                 onClick = {
                                     selectedTab = 1
                                     coroutineScope.launch { pagerState.animateScrollToPage(1) }
                                 },
-                                label = { Text("Albums") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = CyanAlpha15,
-                                    selectedLabelColor = CyanPrimary,
-                                    containerColor = CardBlack,
-                                    labelColor = Color(0xFF888888)
-                                ),
-                                border = null
+                                label = "Albums"
                             )
 
-                            FilterChip(
+                            PremiumFilterChip(
                                 selected = selectedTab == 2,
                                 onClick = {
                                     selectedTab = 2
                                     coroutineScope.launch { pagerState.animateScrollToPage(2) }
                                 },
-                                label = { Text("Artistes") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = CyanAlpha15,
-                                    selectedLabelColor = CyanPrimary,
-                                    containerColor = CardBlack,
-                                    labelColor = Color(0xFF888888)
-                                ),
-                                border = null
+                                label = "Artistes"
                             )
                         }
                     }
 
-                    // Options de tri et filtres
+                    // Options de tri avec design amélioré
                     if (!isSearchVisible) {
                         Row(
                             modifier = Modifier
@@ -313,7 +321,7 @@ fun LibraryScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(20.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 FilterText(
@@ -333,211 +341,166 @@ fun LibraryScreen(
                                 )
                             }
 
-                            // Menu de tri
+                            // Menu de tri premium
                             Box {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.clickable { showSortMenu = true }
+                                Surface(
+                                    onClick = { showSortMenu = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (sortOrder != LibraryVM.SortOrder.NONE) CyanAlpha12 else Color.Transparent
                                 ) {
-                                    Icon(
-                                        imageVector = when (sortOrder) {
-                                            LibraryVM.SortOrder.AZ, LibraryVM.SortOrder.ZA -> Icons.Rounded.SortByAlpha
-                                            LibraryVM.SortOrder.DATE -> Icons.Rounded.AccessTime
-                                            LibraryVM.SortOrder.ARTIST -> Icons.Rounded.Person
-                                            LibraryVM.SortOrder.DURATION -> Icons.Rounded.Timer
-                                            else -> Icons.Rounded.Sort
-                                        },
-                                        contentDescription = "Trier",
-                                        tint = if (sortOrder != LibraryVM.SortOrder.NONE) CyanPrimary else Color(0xFF666666),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = when (sortOrder) {
-                                            LibraryVM.SortOrder.AZ -> "A-Z"
-                                            LibraryVM.SortOrder.ZA -> "Z-A"
-                                            LibraryVM.SortOrder.ARTIST -> "Artiste"
-                                            LibraryVM.SortOrder.DATE -> "Date"
-                                            LibraryVM.SortOrder.DURATION -> "Durée"
-                                            else -> "Trier"
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontSize = 13.sp
-                                        ),
-                                        color = if (sortOrder != LibraryVM.SortOrder.NONE) CyanPrimary else Color(0xFF666666)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = when (sortOrder) {
+                                                LibraryVM.SortOrder.AZ, LibraryVM.SortOrder.ZA -> Icons.Rounded.SortByAlpha
+                                                LibraryVM.SortOrder.DATE -> Icons.Rounded.AccessTime
+                                                LibraryVM.SortOrder.ARTIST -> Icons.Rounded.Person
+                                                LibraryVM.SortOrder.DURATION -> Icons.Rounded.Timer
+                                                else -> Icons.Rounded.Sort
+                                            },
+                                            contentDescription = "Trier",
+                                            tint = if (sortOrder != LibraryVM.SortOrder.NONE) CyanPrimary else Color(0xFF777777),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = when (sortOrder) {
+                                                LibraryVM.SortOrder.AZ -> "A-Z"
+                                                LibraryVM.SortOrder.ZA -> "Z-A"
+                                                LibraryVM.SortOrder.ARTIST -> "Artiste"
+                                                LibraryVM.SortOrder.DATE -> "Date"
+                                                LibraryVM.SortOrder.DURATION -> "Durée"
+                                                else -> "Trier"
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Medium
+                                            ),
+                                            color = if (sortOrder != LibraryVM.SortOrder.NONE) CyanPrimary else Color(0xFF777777)
+                                        )
+                                    }
                                 }
 
-                                // Dropdown menu de tri
+                                // Dropdown menu premium
                                 DropdownMenu(
                                     expanded = showSortMenu,
                                     onDismissRequest = { showSortMenu = false },
-                                    modifier = Modifier.background(CardBlack),
-                                    containerColor = CardBlack
+                                    modifier = Modifier
+                                        .background(SurfaceElevated)
+                                        .shadow(8.dp, RoundedCornerShape(16.dp)),
+                                    containerColor = SurfaceElevated,
+                                    shape = RoundedCornerShape(16.dp)
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Titre A-Z", color = if (sortOrder == LibraryVM.SortOrder.AZ) CyanPrimary else Color.White) },
+                                        text = {
+                                            Text(
+                                                "Titre A-Z",
+                                                color = if (sortOrder == LibraryVM.SortOrder.AZ) CyanPrimary else Color.White,
+                                                fontWeight = if (sortOrder == LibraryVM.SortOrder.AZ) FontWeight.SemiBold else FontWeight.Normal
+                                            )
+                                        },
                                         onClick = {
                                             viewModel.setSortOrder(LibraryVM.SortOrder.AZ)
                                             showSortMenu = false
                                         },
                                         leadingIcon = {
-                                            Icon(Icons.Rounded.SortByAlpha, null, tint = if (sortOrder == LibraryVM.SortOrder.AZ) CyanPrimary else Color.White)
+                                            Icon(Icons.Rounded.SortByAlpha, null, tint = if (sortOrder == LibraryVM.SortOrder.AZ) CyanPrimary else Color(0xFF999999))
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Titre Z-A", color = if (sortOrder == LibraryVM.SortOrder.ZA) CyanPrimary else Color.White) },
+                                        text = {
+                                            Text(
+                                                "Titre Z-A",
+                                                color = if (sortOrder == LibraryVM.SortOrder.ZA) CyanPrimary else Color.White,
+                                                fontWeight = if (sortOrder == LibraryVM.SortOrder.ZA) FontWeight.SemiBold else FontWeight.Normal
+                                            )
+                                        },
                                         onClick = {
                                             viewModel.setSortOrder(LibraryVM.SortOrder.ZA)
                                             showSortMenu = false
                                         },
                                         leadingIcon = {
-                                            Icon(Icons.Rounded.SortByAlpha, null, tint = if (sortOrder == LibraryVM.SortOrder.ZA) CyanPrimary else Color.White)
+                                            Icon(Icons.Rounded.SortByAlpha, null, tint = if (sortOrder == LibraryVM.SortOrder.ZA) CyanPrimary else Color(0xFF999999))
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Artiste", color = if (sortOrder == LibraryVM.SortOrder.ARTIST) CyanPrimary else Color.White) },
+                                        text = {
+                                            Text(
+                                                "Artiste",
+                                                color = if (sortOrder == LibraryVM.SortOrder.ARTIST) CyanPrimary else Color.White,
+                                                fontWeight = if (sortOrder == LibraryVM.SortOrder.ARTIST) FontWeight.SemiBold else FontWeight.Normal
+                                            )
+                                        },
                                         onClick = {
-                                            viewModel.sortByArtist()
+                                            viewModel.setSortOrder(LibraryVM.SortOrder.ARTIST)
                                             showSortMenu = false
                                         },
                                         leadingIcon = {
-                                            Icon(Icons.Rounded.Person, null, tint = if (sortOrder == LibraryVM.SortOrder.ARTIST) CyanPrimary else Color.White)
+                                            Icon(Icons.Rounded.Person, null, tint = if (sortOrder == LibraryVM.SortOrder.ARTIST) CyanPrimary else Color(0xFF999999))
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Date d'ajout", color = if (sortOrder == LibraryVM.SortOrder.DATE) CyanPrimary else Color.White) },
+                                        text = {
+                                            Text(
+                                                "Date d'ajout",
+                                                color = if (sortOrder == LibraryVM.SortOrder.DATE) CyanPrimary else Color.White,
+                                                fontWeight = if (sortOrder == LibraryVM.SortOrder.DATE) FontWeight.SemiBold else FontWeight.Normal
+                                            )
+                                        },
                                         onClick = {
-                                            viewModel.sortByDateAdded()
+                                            viewModel.setSortOrder(LibraryVM.SortOrder.DATE)
                                             showSortMenu = false
                                         },
                                         leadingIcon = {
-                                            Icon(Icons.Rounded.AccessTime, null, tint = if (sortOrder == LibraryVM.SortOrder.DATE) CyanPrimary else Color.White)
+                                            Icon(Icons.Rounded.AccessTime, null, tint = if (sortOrder == LibraryVM.SortOrder.DATE) CyanPrimary else Color(0xFF999999))
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Durée", color = if (sortOrder == LibraryVM.SortOrder.DURATION) CyanPrimary else Color.White) },
+                                        text = {
+                                            Text(
+                                                "Durée",
+                                                color = if (sortOrder == LibraryVM.SortOrder.DURATION) CyanPrimary else Color.White,
+                                                fontWeight = if (sortOrder == LibraryVM.SortOrder.DURATION) FontWeight.SemiBold else FontWeight.Normal
+                                            )
+                                        },
                                         onClick = {
-                                            viewModel.sortByDuration()
+                                            viewModel.setSortOrder(LibraryVM.SortOrder.DURATION)
                                             showSortMenu = false
                                         },
                                         leadingIcon = {
-                                            Icon(Icons.Rounded.Timer, null, tint = if (sortOrder == LibraryVM.SortOrder.DURATION) CyanPrimary else Color.White)
-                                        }
-                                    )
-                                    Divider(color = Color(0xFF2A2A2A))
-                                    DropdownMenuItem(
-                                        text = { Text("Par défaut", color = Color.White) },
-                                        onClick = {
-                                            viewModel.clearSort()
-                                            showSortMenu = false
+                                            Icon(Icons.Rounded.Timer, null, tint = if (sortOrder == LibraryVM.SortOrder.DURATION) CyanPrimary else Color(0xFF999999))
                                         }
                                     )
                                 }
                             }
                         }
                     }
-
-                    // Afficher le nombre de résultats si recherche active
-                    if (query.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${when (selectedTab) {
-                                    0 -> tracks.size
-                                    1 -> albums.size
-                                    else -> artists.size
-                                }} résultat${if ((when (selectedTab) {
-                                        0 -> tracks.size
-                                        1 -> albums.size
-                                        else -> artists.size
-                                    }) > 1) "s" else ""}",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF666666)
-                                )
-                            )
-
-                            TextButton(
-                                onClick = { viewModel.clearQuery() },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "Effacer",
-                                    color = CyanPrimary,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Divider(
-                        color = Color(0xFF1A1A1A),
-                        thickness = 0.5.dp,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
                 }
             },
             containerColor = BackgroundBlack
         ) { paddingValues ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BackgroundBlack)
                     .padding(paddingValues)
             ) {
-                // Notification
                 scanResult?.let { result ->
-                    Surface(
+                    Snackbar(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = CyanAlpha15,
-                        tonalElevation = 0.dp
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp),
+                        containerColor = CyanAlpha20,
+                        contentColor = CyanPrimary
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(CyanAlpha20),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Check,
-                                    contentDescription = null,
-                                    tint = CyanPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = result,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 14.sp
-                                ),
-                                color = Color.White
-                            )
-                        }
+                        Text(result, color = CyanPrimary)
                     }
                 }
 
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    key = { page -> "pager_page_$page" }  // ✅ Clé simple et unique
+                    modifier = Modifier.fillMaxSize()
                 ) { page ->
                     when (page) {
                         0 -> {
@@ -550,17 +513,16 @@ fun LibraryScreen(
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     items(
                                         items = tracks,
-                                        key = { track -> "track_${track.id}_${track.hashCode()}" }  // ✅ Clé unique avec hash
+                                        key = { track -> "track_${track.id}_${track.hashCode()}" }
                                     ) { track ->
-                                        val isCurrentTrack = track.id.toString() == currentlyPlayingTrackId
                                         TrackItemWithPlayingIndicator(
                                             track = track,
-                                            isPlaying = isCurrentTrack && isPlaying,
-                                            isCurrentTrack = isCurrentTrack,
+                                            isPlaying = isPlaying && currentlyPlayingTrackId == track.id.toString(),
+                                            isCurrentTrack = currentlyPlayingTrackId == track.id.toString(),
                                             navController = nav
                                         )
                                     }
@@ -580,12 +542,11 @@ fun LibraryScreen(
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     items(
                                         items = albums,
                                         key = { album ->
-                                            // ✅ PROTECTION : Gérer les IDs null ou "<unknown>"
                                             val safeId = album.id?.takeIf { it != "<unknown>" } ?: "idx_${albums.indexOf(album)}"
                                             "album_${safeId}_${album.hashCode()}"
                                         }
@@ -608,12 +569,11 @@ fun LibraryScreen(
                                 LazyColumn(
                                     modifier = Modifier.fillMaxSize(),
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     items(
                                         items = artists,
                                         key = { artist ->
-                                            // ✅ PROTECTION : Gérer les IDs null ou "<unknown>"
                                             val safeId = artist.id?.takeIf { it != "<unknown>" } ?: "idx_${artists.indexOf(artist)}"
                                             "artist_${safeId}_${artist.hashCode()}"
                                         }
@@ -634,6 +594,34 @@ fun LibraryScreen(
 }
 
 @Composable
+fun PremiumFilterChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: String
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) CyanAlpha15 else CardBlack,
+        modifier = Modifier.height(42.dp)
+    ) {
+        Box(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+                ),
+                color = if (selected) CyanPrimary else Color(0xFF888888)
+            )
+        }
+    }
+}
+
+@Composable
 fun FilterText(
     text: String,
     selected: Boolean,
@@ -642,10 +630,10 @@ fun FilterText(
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium.copy(
-            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             fontSize = 14.sp
         ),
-        color = if (selected) Color.White else Color(0xFF666666),
+        color = if (selected) Color.White else Color(0xFF777777),
         modifier = Modifier.clickable(onClick = onClick)
     )
 }
@@ -657,105 +645,119 @@ fun TrackItemWithPlayingIndicator(
     isCurrentTrack: Boolean,
     navController: NavHostController
 ) {
-    Row(
+    Surface(
+        onClick = { navController.navigate("player/${track.id}") },
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clickable(
-                onClick = { navController.navigate("player/${track.id}") },
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            )
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .height(64.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isCurrentTrack) CyanAlpha12 else Color.Transparent
     ) {
-        // Box avec indicateur
-        Box(
+        Row(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(
-                    if (isCurrentTrack) CyanAlpha15 else CardBlack
-                ),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            when {
-                isCurrentTrack && isPlaying -> {
-                    PlayingBarsIndicator()
-                }
-                isCurrentTrack -> {
-                    Icon(
-                        imageVector = Icons.Rounded.Pause,
-                        contentDescription = null,
-                        tint = CyanPrimary,
-                        modifier = Modifier.size(20.dp)
+            // Thumbnail premium
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(
+                        elevation = if (isCurrentTrack) 8.dp else 2.dp,
+                        shape = RoundedCornerShape(10.dp),
+                        spotColor = if (isCurrentTrack) CyanPrimary else Color.Transparent
                     )
-                }
-                else -> {
-                    Icon(
-                        imageVector = Icons.Rounded.MusicNote,
-                        contentDescription = null,
-                        tint = CyanPrimary.copy(alpha = 0.7f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = track.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = if (isCurrentTrack) FontWeight.SemiBold else FontWeight.Medium,
-                    fontSize = 13.sp
-                ),
-                color = if (isCurrentTrack) CyanPrimary else Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = track.artist,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = 12.sp
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        if (isCurrentTrack) {
+                            Brush.linearGradient(
+                                colors = listOf(CyanPrimary.copy(alpha = 0.3f), CyanSecondary.copy(alpha = 0.2f))
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                colors = listOf(CardBlack, SurfaceBlack)
+                            )
+                        }
                     ),
-                    color = Color(0xFF666666),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                // Afficher la durée si disponible
-                track.duration?.let { duration ->
-                    if (duration > 0) {
-                        Text(
-                            text = " • ${formatDuration(duration)}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 12.sp
-                            ),
-                            color = Color(0xFF444444)
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isCurrentTrack && isPlaying -> {
+                        PlayingBarsIndicator()
+                    }
+                    isCurrentTrack -> {
+                        Icon(
+                            imageVector = Icons.Rounded.Pause,
+                            contentDescription = null,
+                            tint = CyanPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Rounded.MusicNote,
+                            contentDescription = null,
+                            tint = CyanPrimary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-        IconButton(
-            onClick = { },
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = "Options",
-                tint = Color(0xFF444444),
-                modifier = Modifier.size(18.dp)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = if (isCurrentTrack) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 14.sp
+                    ),
+                    color = if (isCurrentTrack) CyanPrimary else Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = track.artist,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp
+                        ),
+                        color = Color(0xFF888888),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    track.duration?.let { duration ->
+                        if (duration > 0) {
+                            Text(
+                                text = " • ${formatDuration(duration)}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontSize = 12.sp
+                                ),
+                                color = Color(0xFF555555)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = { },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "Options",
+                    tint = Color(0xFF666666),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -766,19 +768,19 @@ fun PlayingBarsIndicator(
     color: Color = CyanPrimary
 ) {
     Row(
-        modifier = Modifier.height(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally),
+        modifier = Modifier.height(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.Bottom
     ) {
         repeat(barCount) { index ->
             val infiniteTransition = rememberInfiniteTransition(label = "bar$index")
 
             val height by infiniteTransition.animateFloat(
-                initialValue = 4f,
-                targetValue = 14f,
+                initialValue = 5f,
+                targetValue = 16f,
                 animationSpec = infiniteRepeatable(
                     animation = tween(
-                        durationMillis = 400 + (index * 120),
+                        durationMillis = 450 + (index * 130),
                         easing = FastOutSlowInEasing
                     ),
                     repeatMode = RepeatMode.Reverse
@@ -802,70 +804,81 @@ fun AlbumItemMinimal(
     album: com.example.mozika.domain.model.Album,
     navController: NavHostController
 ) {
-    Row(
+    Surface(
+        onClick = { navController.navigate("album/${album.id}") },
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clickable(
-                onClick = { navController.navigate("album/${album.id}") },
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            )
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .height(68.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(CardBlack),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Album,
-                contentDescription = null,
-                tint = CyanPrimary.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
-            )
-        }
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(4.dp, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                CardBlack,
+                                SurfaceBlack
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Album,
+                    contentDescription = null,
+                    tint = CyanPrimary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = album.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp
-                ),
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${album.artist} • ${album.trackCount} pistes",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.sp
-                ),
-                color = Color(0xFF666666),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = album.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    ),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = "${album.artist} • ${album.trackCount} pistes",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp
+                    ),
+                    color = Color(0xFF888888),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-        IconButton(
-            onClick = { },
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = "Options",
-                tint = Color(0xFF444444),
-                modifier = Modifier.size(18.dp)
-            )
+            IconButton(
+                onClick = { },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "Options",
+                    tint = Color(0xFF666666),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -875,70 +888,81 @@ fun ArtistItemMinimal(
     artist: com.example.mozika.domain.model.Artist,
     navController: NavHostController
 ) {
-    Row(
+    Surface(
+        onClick = { navController.navigate("artist/${artist.id}") },
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clickable(
-                onClick = { navController.navigate("artist/${artist.id}") },
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            )
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .height(68.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Transparent
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(CardBlack),
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Rounded.Person,
-                contentDescription = null,
-                tint = CyanPrimary.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp)
-            )
-        }
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(4.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                CyanPrimary.copy(alpha = 0.2f),
+                                CyanSecondary.copy(alpha = 0.15f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Person,
+                    contentDescription = null,
+                    tint = CyanPrimary.copy(alpha = 0.8f),
+                    modifier = Modifier.size(26.dp)
+                )
+            }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = artist.name,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp
-                ),
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${artist.albumCount} albums • ${artist.trackCount} titres",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 12.sp
-                ),
-                color = Color(0xFF666666),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = artist.name,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    ),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = "${artist.albumCount} albums • ${artist.trackCount} titres",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp
+                    ),
+                    color = Color(0xFF888888),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-        IconButton(
-            onClick = { },
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = "Options",
-                tint = Color(0xFF444444),
-                modifier = Modifier.size(18.dp)
-            )
+            IconButton(
+                onClick = { },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = "Options",
+                    tint = Color(0xFF666666),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
@@ -958,83 +982,100 @@ fun EmptyLibraryScreen(
     ) {
         Box(
             modifier = Modifier
-                .size(100.dp)
+                .size(120.dp)
+                .shadow(12.dp, CircleShape, spotColor = CyanPrimary)
                 .clip(CircleShape)
-                .background(CyanAlpha15),
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            CyanAlpha20,
+                            CyanAlpha15,
+                            Color.Transparent
+                        )
+                    )
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Rounded.MusicNote,
                 contentDescription = "Music library",
                 tint = CyanPrimary,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
             text = "Bibliothèque vide",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 22.sp
+                fontSize = 24.sp,
+                letterSpacing = (-0.5).sp
             ),
             textAlign = TextAlign.Center,
             color = Color.White
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Text(
             text = "Commencez par scanner votre musique",
             style = MaterialTheme.typography.bodyMedium.copy(
-                lineHeight = 20.sp,
-                fontSize = 14.sp
+                lineHeight = 22.sp,
+                fontSize = 15.sp
             ),
-            color = Color(0xFF666666),
+            color = Color(0xFF888888),
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(36.dp))
 
         Button(
             onClick = onScanClick,
             enabled = !isScanning,
             modifier = Modifier
-                .fillMaxWidth(0.75f)
-                .height(48.dp),
-            shape = RoundedCornerShape(12.dp),
+                .fillMaxWidth(0.8f)
+                .height(56.dp)
+                .shadow(
+                    elevation = if (isScanning) 0.dp else 12.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    spotColor = CyanPrimary
+                ),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = CyanPrimary,
-                contentColor = BackgroundBlack
+                contentColor = BackgroundBlack,
+                disabledContainerColor = CyanAlpha15
             )
         ) {
             if (isScanning) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.5.dp,
-                    color = BackgroundBlack
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 3.dp,
+                    color = CyanPrimary
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     "Scan en cours...",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = CyanPrimary
                 )
             } else {
                 Icon(
                     imageVector = Icons.Rounded.Refresh,
                     contentDescription = null,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(26.dp)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Text(
                     "Scanner ma musique",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 )
             }

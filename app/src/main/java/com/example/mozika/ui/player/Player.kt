@@ -7,6 +7,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,6 +42,15 @@ import com.example.mozika.ui.playlist.PlaylistVM
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
+
+// Couleurs inspirées de Library.kt
+private val CyanPrimary = Color(0xFF22D3EE)
+private val CyanAlpha15 = Color(0xFF22D3EE).copy(alpha = 0.15f)
+private val CyanAlpha20 = Color(0xFF22D3EE).copy(alpha = 0.20f)
+private val BackgroundBlack = Color(0xFF000000)
+private val CardBlack = Color(0xFF141414)
+private val SurfaceBlack = Color(0xFF0A0A0A)
+private val FavoriteRed = Color(0xFFEF4444) // Couleur rouge pour le favori
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,8 +102,8 @@ fun PlayerScreen(
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color(0xFF121212),
-                        Color(0xFF050505)
+                        SurfaceBlack,
+                        BackgroundBlack
                     )
                 )
             )
@@ -108,7 +118,7 @@ fun PlayerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .height(56.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -116,108 +126,105 @@ fun PlayerScreen(
                     onClick = {
                         navController.popBackStack()
                     },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0x20FFFFFF), CircleShape)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = "Retour",
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
                 Text(
-                    text = "Now Playing",
+                    text = "Lecture en cours",
                     style = MaterialTheme.typography.titleMedium.copy(
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
+                        fontSize = 15.sp,
+                        letterSpacing = (-0.2).sp
                     )
                 )
 
                 IconButton(
                     onClick = { vm.refreshLibrary() },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Color(0x20FFFFFF), CircleShape)
+                    modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Refresh,
+                        imageVector = Icons.Rounded.Refresh,
                         contentDescription = "Actualiser",
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // ALBUM CARD compacte
-            Card(
+            Surface(
                 modifier = Modifier
-                    .fillMaxWidth(0.75f) // Réduit de 100% à 75% de la largeur
+                    .fillMaxWidth(0.75f)
                     .aspectRatio(1f),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1E1E1E)
-                ),
-                elevation = CardDefaults.cardElevation(6.dp)
+                color = CardBlack,
+                tonalElevation = 4.dp,
+                shadowElevation = 6.dp
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_music_note),
+                    Icon(
+                        imageVector = Icons.Rounded.MusicNote,
                         contentDescription = "Album cover",
-                        modifier = Modifier
-                            .fillMaxSize(0.6f), // Réduit de 100% à 60% de l'espace disponible
-                        contentScale = ContentScale.Fit
+                        tint = CyanPrimary.copy(alpha = 0.6f),
+                        modifier = Modifier.size(120.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // INFOS TITRE / ARTISTE compact
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = 16.dp)
             ) {
                 Text(
                     text = vm.currentTrack?.title ?: "Titre inconnu",
-                    style = MaterialTheme.typography.titleLarge.copy(
+                    style = MaterialTheme.typography.headlineSmall.copy(
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        fontSize = 20.sp,
+                        letterSpacing = (-0.5).sp
                     ),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = vm.currentTrack?.artist ?: "Artiste inconnue",
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        color = Color(0xFFB3B3B3),
-                        fontSize = 14.sp
+                        color = Color(0xFF999999),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = vm.currentTrack?.album ?: "Album inconnu",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color(0xFF808080),
-                        fontSize = 12.sp
+                        color = Color(0xFF666666),
+                        fontSize = 13.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -268,16 +275,18 @@ fun PlayerScreen(
                     Text(
                         text = formatTime(vm.position),
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFFB3B3B3),
-                            fontSize = 10.sp
-                        )
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF999999)
                     )
                     Text(
                         text = formatTime(vm.duration),
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFFB3B3B3),
-                            fontSize = 10.sp
-                        )
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = Color(0xFF999999)
                     )
                 }
             }
@@ -297,7 +306,7 @@ fun PlayerScreen(
                     icon = Icons.Default.Shuffle,
                     label = "Shuffle",
                     isActive = vm.shuffleMode,
-                    activeColor = Color(0xFF1DB954),
+                    activeColor = CyanPrimary,
                     onClick = { vm.toggleShuffle() }
                 )
 
@@ -315,19 +324,24 @@ fun PlayerScreen(
                 }
 
                 // Play/Pause (bouton principal plus grand)
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(Color.White, CircleShape)
-                        .clickable { vm.playPause() },
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.size(72.dp),
+                    shape = CircleShape,
+                    color = CyanPrimary,
+                    shadowElevation = 8.dp,
+                    onClick = { vm.playPause() }
                 ) {
-                    Icon(
-                        imageVector = if (vm.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (vm.isPlaying) "Pause" else "Play",
-                        tint = Color.Black,
-                        modifier = Modifier.size(36.dp)
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = if (vm.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = if (vm.isPlaying) "Pause" else "Play",
+                            tint = BackgroundBlack,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
 
                 // Next
@@ -356,7 +370,7 @@ fun PlayerScreen(
                         PlayerVM.RepeatMode.ONE -> "One"
                     },
                     isActive = vm.repeatMode != PlayerVM.RepeatMode.OFF,
-                    activeColor = Color(0xFF1DB954),
+                    activeColor = CyanPrimary,
                     onClick = { vm.toggleRepeat() }
                 )
             }
@@ -376,7 +390,7 @@ fun PlayerScreen(
                     icon = Icons.Default.Share,
                     label = "Share",
                     isActive = false,
-                    activeColor = Color(0xFF1DB954),
+                    activeColor = CyanPrimary,
                     onClick = {
                         vm.currentTrack?.let { track ->
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -396,12 +410,12 @@ fun PlayerScreen(
                     }
                 )
 
-                // CORRECTION: Le bouton Favorite - maintenant réactif et fonctionnel
+                // CORRECTION: Le bouton Favorite - maintenant réactif et fonctionnel - EN ROUGE
                 ControlButtonWithLabel(
-                    icon = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    icon = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     label = "Favorite",
                     isActive = isFavorite,
-                    activeColor = Color(0xFF1DB954),
+                    activeColor = FavoriteRed,
                     onClick = {
                         currentTrackId?.let { id ->
                             playlistVM.toggleFavorite(id) { nowFavorite ->
@@ -420,7 +434,7 @@ fun PlayerScreen(
                     icon = Icons.Default.PlaylistAdd,
                     label = "Add to",
                     isActive = false,
-                    activeColor = Color(0xFF1DB954),
+                    activeColor = CyanPrimary,
                     onClick = {
                         showPlaylistDialog = true
                     }
@@ -431,7 +445,7 @@ fun PlayerScreen(
                     icon = Icons.Default.MoreVert,
                     label = "More",
                     isActive = false,
-                    activeColor = Color(0xFF1DB954),
+                    activeColor = CyanPrimary,
                     onClick = {
                         showMoreOptions = true
                     }
@@ -499,8 +513,8 @@ fun PlayerScreen(
         ModalBottomSheet(
             onDismissRequest = { showMoreOptions = false },
             sheetState = sheetState,
-            containerColor = Color(0xFF282828),
-            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF404040)) }
+            containerColor = CardBlack,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF333333)) }
         ) {
             MoreOptionsBottomSheetContent(
                 track = vm.currentTrack,
@@ -548,22 +562,23 @@ private fun ControlButtonWithLabel(
     ) {
         IconButton(
             onClick = onClick,
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(44.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (isActive) activeColor else Color(0xFFB3B3B3),
-                modifier = Modifier.size(22.dp)
+                tint = if (isActive) activeColor else Color(0xFF666666),
+                modifier = Modifier.size(24.dp)
             )
         }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                color = if (isActive) activeColor else Color(0xFFB3B3B3),
-                fontSize = 9.sp,
-                fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal
-            )
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
+            ),
+            color = if (isActive) activeColor else Color(0xFF666666),
+            maxLines = 1
         )
     }
 }
@@ -595,13 +610,13 @@ private fun MoreOptionsBottomSheetContent(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
+                        .background(CyanAlpha15),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        Icons.Default.MusicNote,
+                        Icons.Rounded.MusicNote,
                         contentDescription = null,
-                        tint = Color(0xFF1DB954),
+                        tint = CyanPrimary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -625,7 +640,7 @@ private fun MoreOptionsBottomSheetContent(
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = 13.sp
                         ),
-                        color = Color(0xFFB3B3B3),
+                        color = Color(0xFF999999),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -634,8 +649,8 @@ private fun MoreOptionsBottomSheetContent(
 
             Divider(
                 modifier = Modifier.padding(horizontal = 20.dp),
-                color = Color(0xFF404040),
-                thickness = 0.5.dp
+                color = Color(0xFF222222),
+                thickness = 1.dp
             )
         }
 
@@ -656,8 +671,8 @@ private fun MoreOptionsBottomSheetContent(
 
         Divider(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            color = Color(0xFF404040),
-            thickness = 0.5.dp
+            color = Color(0xFF222222),
+            thickness = 1.dp
         )
 
         MoreOptionItem(
@@ -732,8 +747,8 @@ private fun AddToPlaylistDialogPlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 500.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF282828)
+            shape = RoundedCornerShape(20.dp),
+            color = CardBlack
         ) {
             Column(
                 modifier = Modifier
@@ -755,8 +770,8 @@ private fun AddToPlaylistDialogPlayer(
                 Surface(
                     onClick = { showCreatePlaylist = true },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF1DB954).copy(alpha = 0.15f)
+                    shape = RoundedCornerShape(12.dp),
+                    color = CyanAlpha15
                 ) {
                     Row(
                         modifier = Modifier
@@ -765,9 +780,9 @@ private fun AddToPlaylistDialogPlayer(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            imageVector = Icons.Rounded.Add,
                             contentDescription = "Créer",
-                            tint = Color(0xFF1DB954),
+                            tint = CyanPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -777,7 +792,7 @@ private fun AddToPlaylistDialogPlayer(
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 15.sp
                             ),
-                            color = Color(0xFF1DB954)
+                            color = CyanPrimary
                         )
                     }
                 }
@@ -792,7 +807,7 @@ private fun AddToPlaylistDialogPlayer(
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp
                         ),
-                        color = Color(0xFFB3B3B3),
+                        color = Color(0xFF999999),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
@@ -836,7 +851,7 @@ private fun AddToPlaylistDialogPlayer(
                                             style = MaterialTheme.typography.bodySmall.copy(
                                                 fontSize = 12.sp
                                             ),
-                                            color = Color(0xFF808080)
+                                            color = Color(0xFF666666)
                                         )
                                     }
                                 }
@@ -851,7 +866,7 @@ private fun AddToPlaylistDialogPlayer(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Annuler", color = Color(0xFF1DB954))
+                    Text("Annuler", color = Color(0xFF999999), fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -872,14 +887,15 @@ private fun AddToPlaylistDialogPlayer(
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
-                    label = { Text("Nom", color = Color(0xFFB3B3B3)) },
+                    label = { Text("Nom", color = Color(0xFF666666)) },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF1DB954),
-                        unfocusedBorderColor = Color(0xFF404040),
-                        cursorColor = Color(0xFF1DB954)
+                        focusedBorderColor = CyanPrimary,
+                        unfocusedBorderColor = Color(0xFF333333),
+                        cursorColor = CyanPrimary,
+                        focusedLabelColor = CyanPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -907,16 +923,17 @@ private fun AddToPlaylistDialogPlayer(
                 ) {
                     Text(
                         "Créer",
-                        color = if (newPlaylistName.isNotBlank()) Color(0xFF1DB954) else Color(0xFF808080)
+                        color = if (newPlaylistName.isNotBlank()) CyanPrimary else Color(0xFF666666),
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCreatePlaylist = false }) {
-                    Text("Annuler", color = Color.White)
+                    Text("Annuler", color = Color(0xFF999999), fontWeight = FontWeight.Medium)
                 }
             },
-            containerColor = Color(0xFF282828)
+            containerColor = CardBlack
         )
     }
 }
@@ -932,8 +949,8 @@ private fun TrackInfoDialogPlayer(
         onDismissRequest = onDismiss
     ) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF282828)
+            shape = RoundedCornerShape(20.dp),
+            color = CardBlack
         ) {
             Column(
                 modifier = Modifier
@@ -964,7 +981,7 @@ private fun TrackInfoDialogPlayer(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Fermer", color = Color(0xFF1DB954))
+                    Text("Fermer", color = CyanPrimary, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -974,22 +991,25 @@ private fun TrackInfoDialogPlayer(
 @Composable
 private fun InfoRowPlayer(label: String, value: String) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF808080),
-            fontSize = 12.sp
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 0.5.sp
+            ),
+            color = Color(0xFF666666)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
-            fontSize = 14.sp
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Normal
+            ),
+            color = Color.White
         )
     }
 }
@@ -999,25 +1019,35 @@ fun EmptyPlayerScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
-            .padding(16.dp),
+            .background(BackgroundBlack)
+            .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = "Aucune musique",
-            tint = Color(0xFF404040),
-            modifier = Modifier.size(64.dp)
-        )
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(CyanAlpha15),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.MusicNote,
+                contentDescription = "Aucune musique",
+                tint = CyanPrimary,
+                modifier = Modifier.size(48.dp)
+            )
+        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Text(
             text = "Aucune piste sélectionnée",
-            style = MaterialTheme.typography.headlineSmall.copy(
-                color = Color.White
-            )
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp
+            ),
+            color = Color.White
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -1025,20 +1055,38 @@ fun EmptyPlayerScreen(navController: NavController) {
         Text(
             text = "Sélectionnez une piste depuis votre bibliothèque",
             style = MaterialTheme.typography.bodyMedium.copy(
-                color = Color(0xFF808080)
-            )
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            ),
+            color = Color(0xFF666666)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
 
         Button(
             onClick = { navController.popBackStack() },
+            modifier = Modifier
+                .fillMaxWidth(0.75f)
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1DB954)
-            ),
-            modifier = Modifier.width(220.dp)
+                containerColor = CyanPrimary,
+                contentColor = BackgroundBlack
+            )
         ) {
-            Text("Retour à la bibliothèque")
+            Icon(
+                imageVector = Icons.Rounded.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Retour à la bibliothèque",
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
         }
     }
 }
