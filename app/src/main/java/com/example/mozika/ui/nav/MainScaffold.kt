@@ -38,14 +38,22 @@ fun MainScaffold() {
     val navController = rememberNavController()
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = currentBackStackEntry?.destination?.route
+    val currentRoute = currentBackStackEntry?.destination?.route ?: ""
 
-    val isInPlayerScreen = currentRoute?.startsWith("player/") == true
+    val isInPlayerScreen = currentRoute.startsWith("player/")
 
-    val showBottomNav = when (currentRoute?.substringBefore("/")) {
-        "player", "album", "artist" -> false
-        else -> true
-    }
+    // Vérifier si la route contient ces mots-clés (pour gérer les routes avec paramètres)
+    val isSpecialPlaylist = currentRoute.contains("favorites") ||
+            currentRoute.contains("recently_played") ||
+            currentRoute.contains("most_played") ||
+            currentRoute.contains("top_played")
+
+    val isPlaylistDetail = currentRoute.contains("playlistDetail")  // ← Vérifier contient, pas égal
+
+    val isAlbumOrArtist = currentRoute.substringBefore("/") in listOf("album", "artist")
+
+    // Routes qui ne doivent pas afficher la barre de navigation
+    val hideBottomNav = isInPlayerScreen || isSpecialPlaylist || isPlaylistDetail || isAlbumOrArtist
 
     // Surface racine noire
     Surface(
@@ -53,14 +61,23 @@ fun MainScaffold() {
         color = BackgroundBlack
     ) {
         Scaffold(
-            containerColor = BackgroundBlack, // Fond noir du Scaffold
+            containerColor = BackgroundBlack,
             bottomBar = {
                 when {
                     isInPlayerScreen -> {
-                        // Rien
+                        // Rien - écran player plein écran
                     }
 
-                    currentRoute?.substringBefore("/") in listOf("album", "artist") -> {
+                    isAlbumOrArtist -> {
+                        // Mini player seul pour album/artist
+                        MiniPlayerBar(
+                            navController = navController,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    isSpecialPlaylist || isPlaylistDetail -> {  // ← Ajouté isPlaylistDetail ici
+                        // Mini player seul pour les playlists (pas de bottom nav)
                         MiniPlayerBar(
                             navController = navController,
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -68,6 +85,7 @@ fun MainScaffold() {
                     }
 
                     else -> {
+                        // Mini player + bottom navigation pour les autres écrans
                         Column(
                             modifier = Modifier.background(BackgroundBlack)
                         ) {
@@ -76,7 +94,7 @@ fun MainScaffold() {
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                             )
 
-                            if (showBottomNav) {
+                            if (!hideBottomNav) {
                                 ModernBottomNavigation(navController = navController)
                             }
                         }
@@ -87,7 +105,7 @@ fun MainScaffold() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(BackgroundBlack) // Fond noir derrière le contenu
+                    .background(BackgroundBlack)
                     .padding(paddingValues)
             ) {
                 AppNav(nav = navController)
@@ -112,7 +130,7 @@ fun ModernBottomNavigation(navController: NavHostController) {
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp),
-        color = SurfaceDark, // Fond très sombre pour la barre
+        color = SurfaceDark,
         tonalElevation = 0.dp,
         shadowElevation = 8.dp
     ) {

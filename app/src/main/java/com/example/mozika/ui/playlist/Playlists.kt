@@ -3,21 +3,24 @@ package com.example.mozika.ui.playlist
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -28,13 +31,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import androidx.tv.material3.OutlinedButtonDefaults
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
-// Navigation extension (inchangée)
 import com.example.mozika.ui.nav.navigateToSpecialPlaylist
+import com.example.mozika.ui.theme.CyanPrimary
+import com.example.mozika.ui.theme.CyanAlpha15
+import com.example.mozika.ui.theme.CyanAlpha20
+import com.example.mozika.ui.theme.BackgroundBlack
+import com.example.mozika.ui.theme.CardBlack
+import com.example.mozika.ui.theme.TextGray
+import com.example.mozika.ui.theme.TextGrayLight
+import com.example.mozika.ui.common.MenuOptionItem
+import com.example.mozika.ui.theme.SurfaceBlack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +75,7 @@ fun PlaylistsScreen(
             id = -1L,
             title = "Favoris",
             songCount = favoriteTracks.size,
-            icon = Icons.Filled.Favorite,
+            icon = Icons.Rounded.Favorite,
             gradientColors = listOf(Color(0xFFFF6B6B), Color(0xFFEE5A52)),
             route = "favorites"
         ),
@@ -74,7 +83,7 @@ fun PlaylistsScreen(
             id = -2L,
             title = "Top",
             songCount = topPlayedTracks.size,
-            icon = Icons.Filled.TrendingUp,
+            icon = Icons.Rounded.TrendingUp,
             gradientColors = listOf(Color(0xFF4ECDC4), Color(0xFF44A08D)),
             route = "most_played"
         ),
@@ -82,7 +91,7 @@ fun PlaylistsScreen(
             id = -3L,
             title = "Récent",
             songCount = recentlyPlayedTracks.size,
-            icon = Icons.Filled.History,
+            icon = Icons.Rounded.History,
             gradientColors = listOf(Color(0xFF556270), Color(0xFF4ECDC4)),
             route = "recently_played"
         ),
@@ -90,7 +99,7 @@ fun PlaylistsScreen(
             id = -4L,
             title = "Top 25",
             songCount = minOf(topPlayedTracks.size, 25),
-            icon = Icons.Filled.Star,
+            icon = Icons.Rounded.Star,
             gradientColors = listOf(Color(0xFFC779D0), Color(0xFFFEAC5E)),
             route = "top_played"
         )
@@ -99,310 +108,340 @@ fun PlaylistsScreen(
     val totalSongs = filteredUserPlaylists.sumOf { it.songCount }
     val totalDuration = filteredUserPlaylists.sumOf { it.songCount * 180 }
 
-    Scaffold(
-        modifier = Modifier.background(Color(0xFF121212)), // Fond global
-        topBar = {
-            if (showSearchBar) {
-                // Barre de recherche
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp)
-                        .background(Color(0xFF121212)),
-                    color = Color(0xFF121212),
-                    tonalElevation = 0.dp
-                ) {
-                    Row(
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = BackgroundBlack
+    ) {
+        Scaffold(
+            topBar = {
+                if (showSearchBar) {
+                    // Barre de recherche style Library
+                    Surface(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .fillMaxWidth()
+                            .height(64.dp),
+                        color = BackgroundBlack,
+                        tonalElevation = 0.dp
                     ) {
-                        IconButton(
-                            onClick = {
-                                showSearchBar = false
-                                searchQuery = ""
-                            },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.ArrowBack,
-                                contentDescription = "Retour",
-                                tint = Color.White
-                            )
-                        }
-
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            placeholder = {
-                                Text(
-                                    "Rechercher une playlist...",
-                                    color = Color(0xFFB3B3B3)
-                                )
-                            },
-                            leadingIcon = {
+                                .fillMaxSize()
+                                .padding(horizontal = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    showSearchBar = false
+                                    searchQuery = ""
+                                },
+                                modifier = Modifier.size(40.dp)
+                            ) {
                                 Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = Color.White
+                                    Icons.Rounded.ArrowBack,
+                                    contentDescription = "Retour",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
                                 )
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotBlank()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Effacer",
-                                            tint = Color.White
-                                        )
+                            }
+
+                            Surface(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp),
+                                shape = RoundedCornerShape(22.dp),
+                                color = CardBlack,
+                                tonalElevation = 0.dp
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Search,
+                                        contentDescription = null,
+                                        tint = TextGrayLight,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    BasicTextField(
+                                        value = searchQuery,
+                                        onValueChange = { searchQuery = it },
+                                        modifier = Modifier.weight(1f),
+                                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                            color = Color.White,
+                                            fontSize = 15.sp
+                                        ),
+                                        singleLine = true,
+                                        decorationBox = { innerTextField ->
+                                            Box {
+                                                if (searchQuery.isEmpty()) {
+                                                    Text(
+                                                        "Rechercher une playlist...",
+                                                        color = TextGrayLight,
+                                                        fontSize = 15.sp
+                                                    )
+                                                }
+                                                innerTextField()
+                                            }
+                                        }
+                                    )
+
+                                    if (searchQuery.isNotEmpty()) {
+                                        IconButton(
+                                            onClick = { searchQuery = "" },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Close,
+                                                contentDescription = "Effacer",
+                                                tint = TextGrayLight,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF1DB954),
-                                unfocusedBorderColor = Color(0xFF404040),
-                                focusedContainerColor = Color(0xFF1E1E1E),
-                                unfocusedContainerColor = Color(0xFF1E1E1E),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                cursorColor = Color(0xFF1DB954)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            singleLine = true
-                        )
-                    }
-                }
-            } else {
-                // TopAppBar normale
-                TopAppBar(
-                    title = {
-                        Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                            Text(
-                                "Mes Playlists",
-                                style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                            Text(
-                                "${filteredUserPlaylists.size} collections • ${formatTotalDuration(totalDuration)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFFB3B3B3)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF121212)
-                    ),
-                    modifier = Modifier.height(70.dp),
-                    actions = {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = { showSearchBar = true }) {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Rechercher",
-                                    tint = Color.White
-                                )
-                            }
-                            IconButton(onClick = { showDialog = true }) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "Ajouter une playlist",
-                                    tint = Color.White
-                                )
                             }
                         }
                     }
-                )
-            }
-        },
-        floatingActionButton = {
-            if (!showSearchBar) {
-                FloatingActionButton(
-                    onClick = { showDialog = true },
-                    containerColor = Color(0xFF1DB954),
-                    contentColor = Color.White,
-                    shape = CircleShape,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                }
-            }
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFF121212)),
-            contentPadding = PaddingValues(bottom = 80.dp)
-        ) {
-            // Statistiques
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StatCard(
-                        value = filteredUserPlaylists.size.toString(),
-                        label = "Playlists",
-                        icon = Icons.Outlined.PlaylistPlay
-                    )
-                    StatCard(
-                        value = totalSongs.toString(),
-                        label = "Titres",
-                        icon = Icons.Outlined.MusicNote
-                    )
-                    StatCard(
-                        value = formatTotalDurationShort(totalDuration),
-                        label = "Durée",
-                        icon = Icons.Outlined.Schedule
-                    )
-                }
-            }
-
-            // Collections spéciales
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Collections spéciales",
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "${specialPlaylists.size}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF1DB954),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            item {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(specialPlaylists) { specialPlaylist ->
-                        SpecialPlaylistCard(
-                            playlist = specialPlaylist,
-                            onClick = {
-                                navController.navigateToSpecialPlaylist(specialPlaylist.route)
-                            }
-                        )
-                    }
-                }
-            }
-
-            // Vos collections
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (showSearchBar && searchQuery.isNotBlank()) {
-                            "Résultats (${filteredUserPlaylists.size})"
-                        } else {
-                            "Vos collections"
-                        },
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                    if (filteredUserPlaylists.isNotEmpty()) {
-                        Badge(
-                            containerColor = Color(0xFF1DB954).copy(alpha = 0.1f),
-                            contentColor = Color(0xFF1DB954)
-                        ) {
-                            Text(
-                                text = "${filteredUserPlaylists.size}",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Liste des playlists
-            if (filteredUserPlaylists.isEmpty()) {
-                item {
-                    if (showSearchBar && searchQuery.isNotBlank()) {
+                } else {
+                    // TopAppBar style Library
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(BackgroundBlack)
+                            .padding(top = 8.dp, bottom = 4.dp),
+                        color = BackgroundBlack
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 40.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .padding(horizontal = 20.dp, vertical = 8.dp)
                         ) {
-                            Icon(
-                                Icons.Outlined.SearchOff,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = Color(0xFF808080)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Aucun résultat",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Aucune playlist ne correspond à \"$searchQuery\"",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFB3B3B3)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        "Playlists",
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 28.sp,
+                                            letterSpacing = (-0.5).sp
+                                        ),
+                                        color = Color.White
+                                    )
+                                    if (filteredUserPlaylists.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            "${filteredUserPlaylists.size} collections • ${formatTotalDurationShort(totalDuration)}",
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontSize = 13.sp,
+                                                color = TextGrayLight
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { showSearchBar = true },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Search,
+                                            contentDescription = "Rechercher",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { showDialog = true },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.Add,
+                                            contentDescription = "Ajouter",
+                                            tint = CyanPrimary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        EmptyPlaylistsView(onCreateNewClick = { showDialog = true })
                     }
                 }
-            } else {
-                items(
-                    items = filteredUserPlaylists,
-                    key = { it.id }
-                ) { playlist ->
-                    UserPlaylistItem(
-                        playlist = playlist,
-                        onClick = { navController.navigate("playlistDetail/${playlist.id}") },
-                        onOptionsClick = { showMenuForPlaylist = playlist }
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+            },
+            floatingActionButton = {
+                if (!showSearchBar) {
+                    FloatingActionButton(
+                        onClick = { showDialog = true },
+                        containerColor = CyanPrimary,
+                        contentColor = BackgroundBlack,
+                        shape = CircleShape,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            },
+            containerColor = BackgroundBlack
+        ) { paddingValues ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BackgroundBlack)
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                // Statistiques style Library
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatCardModern(
+                            value = filteredUserPlaylists.size.toString(),
+                            label = "Playlists",
+                            icon = Icons.Rounded.PlaylistPlay
+                        )
+                        StatCardModern(
+                            value = totalSongs.toString(),
+                            label = "Titres",
+                            icon = Icons.Rounded.MusicNote
+                        )
+                        StatCardModern(
+                            value = formatTotalDurationShort(totalDuration),
+                            label = "Durée",
+                            icon = Icons.Rounded.Schedule
+                        )
+                    }
+                }
+
+                // Collections spéciales
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Collections spéciales",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = Color.White
+                        )
+                        Text(
+                            text = "${specialPlaylists.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CyanPrimary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                item {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp)
+                    ) {
+                        items(specialPlaylists) { specialPlaylist ->
+                            SpecialPlaylistCardModern(
+                                playlist = specialPlaylist,
+                                onClick = {
+                                    navController.navigateToSpecialPlaylist(specialPlaylist.route)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Vos collections
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (showSearchBar && searchQuery.isNotBlank()) {
+                                "Résultats (${filteredUserPlaylists.size})"
+                            } else {
+                                "Vos collections"
+                            },
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = Color.White
+                        )
+                        if (filteredUserPlaylists.isNotEmpty()) {
+                            Badge(
+                                containerColor = CyanAlpha15,
+                                contentColor = CyanPrimary
+                            ) {
+                                Text(
+                                    "${filteredUserPlaylists.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Liste des playlists
+                if (filteredUserPlaylists.isEmpty()) {
+                    item {
+                        if (showSearchBar && searchQuery.isNotBlank()) {
+                            EmptySearchResult(query = searchQuery)
+                        } else {
+                            EmptyPlaylistsViewModern(onCreateNewClick = { showDialog = true })
+                        }
+                    }
+                } else {
+                    items(
+                        items = filteredUserPlaylists,
+                        key = { it.id }
+                    ) { playlist ->
+                        UserPlaylistItemModern(
+                            playlist = playlist,
+                            onClick = { navController.navigate("playlistDetail/${playlist.id}") },
+                            onOptionsClick = { showMenuForPlaylist = playlist }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
             }
-
-            item { Spacer(modifier = Modifier.height(60.dp)) }
         }
     }
 
-    // Dialogue de création
+    // Dialogue de création modernisé
     if (showDialog) {
-        CreatePlaylistDialog(
+        CreatePlaylistDialogModern(
             onDismiss = {
                 showDialog = false
                 newName = ""
@@ -421,7 +460,7 @@ fun PlaylistsScreen(
 
     // Menu contextuel
     showMenuForPlaylist?.let { playlist ->
-        PlaylistOptionsMenu(
+        PlaylistOptionsMenuModern(
             playlist = playlist,
             onDismiss = { showMenuForPlaylist = null },
             onDelete = {
@@ -429,492 +468,26 @@ fun PlaylistsScreen(
                 showMenuForPlaylist = null
             },
             onRename = {
-                // TODO: renommage
                 showMenuForPlaylist = null
             }
         )
     }
 }
 
-// ==================== COMPOSANTS ====================
+// Dans Playlists.kt, remplacer la fonction StatCardModern par :
 
 @Composable
-fun CreatePlaylistDialog(
-    onDismiss: () -> Unit,
-    onCreate: (String) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Nouvelle collection",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nom", color = Color(0xFFB3B3B3)) },
-                    placeholder = { Text("Chill, Workout...", color = Color(0xFF808080)) },
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF1DB954),
-                        unfocusedBorderColor = Color(0xFF404040),
-                        focusedContainerColor = Color(0xFF1E1E1E),
-                        unfocusedContainerColor = Color(0xFF1E1E1E),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color(0xFF1DB954)
-                    ),
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                    isError = name.length > 50
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        "Collection personnalisée",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFB3B3B3)
-                    )
-                    Text(
-                        "${name.length}/50",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (name.length > 50) Color(0xFFCF6679) else Color(0xFFB3B3B3)
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onCreate(name) },
-                enabled = name.isNotBlank() && name.length <= 50,
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1DB954)
-                )
-            ) {
-                Text("Créer", fontSize = 14.sp, color = Color.White)
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                shape = RoundedCornerShape(10.dp),
-                border = BorderStroke(1.dp, Color(0xFF404040)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color.White
-                )
-            ) {
-                Text("Annuler", fontSize = 14.sp)
-            }
-        },
-        containerColor = Color(0xFF1E1E1E),
-        titleContentColor = Color.White,
-        textContentColor = Color.White,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.padding(horizontal = 16.dp)
-    )
-}
-
-@Composable
-fun SpecialPlaylistCard(
-    playlist: SpecialPlaylist,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .width(110.dp)
-            .height(120.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(playlist.gradientColors),
-                    shape = RoundedCornerShape(16.dp)
-                )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = playlist.icon,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                Column {
-                    Text(
-                        text = playlist.title,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "${playlist.songCount} titres",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun UserPlaylistItem(
-    playlist: PlaylistWithCount,
-    onClick: () -> Unit,
-    onOptionsClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF1E1E1E)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Vignette avec la première lettre
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF1DB954).copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = playlist.name.take(1).uppercase(),
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1DB954)
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = playlist.name,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(3.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.MusicNote,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = Color(0xFF1DB954).copy(alpha = 0.8f)
-                        )
-                        Text(
-                            text = "${playlist.songCount} titres",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF1DB954),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = Color(0xFFB3B3B3)
-                        )
-                        Text(
-                            text = formatDateShort(playlist.createdAt),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFB3B3B3),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            // Bouton Play
-            IconButton(
-                onClick = { /* TODO: jouer la playlist */ },
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(Color(0xFF1DB954).copy(alpha = 0.1f)),
-                colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = Color(0xFF1DB954)
-                )
-            ) {
-                Icon(
-                    Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            // Menu trois points
-            IconButton(
-                onClick = onOptionsClick,
-                modifier = Modifier.size(34.dp)
-            ) {
-                Icon(
-                    Icons.Outlined.MoreVert,
-                    contentDescription = "Options",
-                    tint = Color(0xFFB3B3B3),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun PlaylistOptionsMenu(
-    playlist: PlaylistWithCount,
-    onDismiss: () -> Unit,
-    onDelete: () -> Unit,
-    onRename: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                playlist.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-        },
-        text = {
-            Column {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { /* TODO: jouer */ }
-                        .padding(vertical = 12.dp),
-                    color = Color.Transparent
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = Color(0xFF1DB954),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Jouer la playlist",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                    }
-                }
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onRename() }
-                        .padding(vertical = 12.dp),
-                    color = Color.Transparent
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.Edit,
-                            contentDescription = null,
-                            tint = Color(0xFFB3B3B3),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Renommer",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                    }
-                }
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onDelete() }
-                        .padding(vertical = 12.dp),
-                    color = Color.Transparent
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            contentDescription = null,
-                            tint = Color(0xFFCF6679),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "Supprimer",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFFCF6679)
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF1E1E1E)
-                )
-            ) {
-                Text("Fermer", color = Color.White)
-            }
-        },
-        containerColor = Color(0xFF1E1E1E),
-        titleContentColor = Color.White,
-        textContentColor = Color.White,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.padding(horizontal = 24.dp)
-    )
-}
-
-@Composable
-fun EmptyPlaylistsView(
-    onCreateNewClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF1DB954).copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Outlined.PlaylistAdd,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = Color(0xFF1DB954)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Aucune collection",
-            style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Créez votre première collection",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFB3B3B3)
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Button(
-            onClick = onCreateNewClick,
-            shape = RoundedCornerShape(10.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1DB954)
-            )
-        ) {
-            Text(
-                "Créer une collection",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White
-            )
-        }
-    }
-}
-
-@Composable
-fun RowScope.StatCard(
+fun StatCardModern(
     value: String,
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    modifier: Modifier = Modifier  // ← Ajouter le modifier en paramètre
 ) {
     Surface(
-        modifier = Modifier
-            .weight(1f)
-            .height(60.dp),
+        modifier = modifier  // ← Utiliser le modifier passé
+            .height(72.dp),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF1E1E1E),
+        color = CardBlack,
         tonalElevation = 0.dp
     ) {
         Column(
@@ -926,39 +499,560 @@ fun RowScope.StatCard(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
                     icon,
                     contentDescription = null,
-                    modifier = Modifier.size(12.dp),
-                    tint = Color(0xFF1DB954)
+                    modifier = Modifier.size(16.dp),
+                    tint = CyanPrimary
                 )
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
-                    color = Color(0xFFB3B3B3),
+                    color = TextGrayLight,
                     fontWeight = FontWeight.Medium
                 )
             }
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                ),
                 color = Color.White
+            )
+        }
+    }
+}
+@Composable
+fun SpecialPlaylistCardModern(
+    playlist: SpecialPlaylist,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(120.dp)
+            .height(140.dp)
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(playlist.gradientColors),
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = playlist.icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = playlist.title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${playlist.songCount} titres",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UserPlaylistItemModern(
+    playlist: PlaylistWithCount,
+    onClick: () -> Unit,
+    onOptionsClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            )
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Vignette avec première lettre
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(CyanAlpha15),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = playlist.name.take(1).uppercase(),
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CyanPrimary
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = playlist.name,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = CyanPrimary.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = "${playlist.songCount} titres",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                        color = TextGrayLight,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.CalendarToday,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = TextGrayLight
+                    )
+                    Text(
+                        text = formatDateShort(playlist.createdAt),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                        color = TextGrayLight,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        // Bouton Play
+        IconButton(
+            onClick = { /* TODO: jouer la playlist */ },
+            modifier = Modifier.size(40.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(CyanAlpha15),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.PlayArrow,
+                    contentDescription = null,
+                    tint = CyanPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        // Menu trois points
+        IconButton(
+            onClick = onOptionsClick,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Icon(
+                Icons.Rounded.MoreVert,
+                contentDescription = "Options",
+                tint = TextGrayLight,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyPlaylistsViewModern(
+    onCreateNewClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(CyanAlpha15),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.PlaylistAdd,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = CyanPrimary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Aucune collection",
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            ),
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Créez votre première playlist pour organiser votre musique",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                color = TextGrayLight,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            ),
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onCreateNewClick,
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = CyanPrimary,
+                contentColor = BackgroundBlack
+            )
+        ) {
+            Icon(
+                Icons.Rounded.Add,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Créer une collection",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptySearchResult(query: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Rounded.SearchOff,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = TextGrayLight
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Aucun résultat",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp
+            ),
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Aucune playlist ne correspond à \"$query\"",
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 14.sp,
+                color = TextGrayLight
+            ),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun CreatePlaylistDialogModern(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Nouvelle collection",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                ),
+                color = Color.White
+            )
+        },
+        text = {
+            Column {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = CardBlack
+                ) {
+                    BasicTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = Color.White,
+                            fontSize = 16.sp
+                        ),
+                        singleLine = true,
+                        decorationBox = { innerTextField ->
+                            Box {
+                                if (name.isEmpty()) {
+                                    Text(
+                                        "Nom de la playlist...",
+                                        color = TextGrayLight,
+                                        fontSize = 16.sp
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Collection personnalisée",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGrayLight
+                    )
+                    Text(
+                        "${name.length}/50",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (name.length > 50) Color(0xFFCF6679) else TextGrayLight
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onCreate(name) },
+                enabled = name.isNotBlank() && name.length <= 50,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = CyanPrimary,
+                    contentColor = BackgroundBlack,
+                    disabledContainerColor = CyanAlpha15,
+                    disabledContentColor = TextGrayLight
+                )
+            ) {
+                Text(
+                    "Créer",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 15.sp
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFF2A2A2A)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Annuler", fontSize = 15.sp)
+            }
+        },
+        containerColor = SurfaceBlack,
+        titleContentColor = Color.White,
+        textContentColor = Color.White,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.padding(horizontal = 24.dp)
+    )
+}
+
+@Composable
+fun PlaylistOptionsMenuModern(
+    playlist: PlaylistWithCount,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit,
+    onRename: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                playlist.name,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp
+                ),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        text = {
+            Column {
+                MenuOptionItem(
+                    icon = Icons.Rounded.PlayArrow,
+                    text = "Jouer la playlist",
+                    iconTint = CyanPrimary,
+                    onClick = { /* TODO */ }
+                )
+                MenuOptionItem(
+                    icon = Icons.Rounded.Edit,
+                    text = "Renommer",
+                    onClick = onRename
+                )
+                MenuOptionItem(
+                    icon = Icons.Rounded.Delete,
+                    text = "Supprimer",
+                    textColor = Color(0xFFCF6679),
+                    iconTint = Color(0xFFCF6679),
+                    onClick = onDelete
+                )
+            }
+        },
+        confirmButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFF2A2A2A)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = TextGrayLight
+                )
+            ) {
+                Text("Fermer")
+            }
+        },
+        containerColor = SurfaceBlack,
+        titleContentColor = Color.White,
+        textContentColor = Color.White,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.padding(horizontal = 24.dp)
+    )
+}
+
+@Composable
+fun MenuOptionItem(
+    icon: ImageVector,
+    text: String,
+    onClick: () -> Unit,
+    iconTint: Color = Color.White,
+    textColor: Color = Color.White
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        color = Color.Transparent
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium
+                ),
+                color = textColor
             )
         }
     }
 }
 
 // ==================== HELPER FUNCTIONS ====================
-
-private fun formatTotalDuration(milliseconds: Int): String {
-    val seconds = milliseconds / 1000
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    return if (hours > 0) String.format("%dh %02dmin", hours, minutes) else String.format("%d min", minutes)
-}
 
 private fun formatTotalDurationShort(milliseconds: Int): String {
     val seconds = milliseconds / 1000

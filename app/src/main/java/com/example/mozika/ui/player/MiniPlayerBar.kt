@@ -6,7 +6,9 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -35,9 +37,13 @@ import com.example.mozika.domain.model.Track
 
 // Couleurs du thème
 private val CyanPrimary = Color(0xFF22D3EE)
-private val SurfaceDark = Color(0xFF0A0A0A)
-private val GradientStart = Color(0xFF1E1E1E)
-private val GradientEnd = Color(0xFF252525)
+private val CyanAlpha15 = Color(0xFF22D3EE).copy(alpha = 0.15f)
+private val CyanAlpha20 = Color(0xFF22D3EE).copy(alpha = 0.20f)
+private val BackgroundBlack = Color(0xFF000000)
+private val CardBlack = Color(0xFF141414)
+private val SurfaceElevated = Color(0xFF1A1A1A)
+private val TextGray = Color(0xFF888888)
+private val TextGrayLight = Color(0xFF666666)
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -77,7 +83,7 @@ fun MiniPlayerBar(
         } else null
 
         trackToShow?.let { track ->
-            MiniPlayerContent(
+            MiniPlayerContentModern(
                 track = track,
                 isPlaying = playerState.isPlaying,
                 hasValidPlaylist = playerState.playlist.isNotEmpty(),
@@ -105,7 +111,7 @@ fun MiniPlayerBar(
 }
 
 @Composable
-private fun MiniPlayerContent(
+private fun MiniPlayerContentModern(
     track: Track,
     isPlaying: Boolean,
     hasValidPlaylist: Boolean,
@@ -118,47 +124,60 @@ private fun MiniPlayerContent(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(68.dp)
+            .height(72.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .clickable(
                 onClick = onTrackClick,
                 indication = null,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                interactionSource = remember { MutableInteractionSource() }
             ),
-        color = SurfaceDark,
+        shape = RoundedCornerShape(16.dp),
+        color = CardBlack,
         tonalElevation = 0.dp,
-        shadowElevation = 12.dp
+        shadowElevation = 8.dp
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     brush = Brush.horizontalGradient(
-                        colors = listOf(GradientStart, GradientEnd, GradientStart)
+                        colors = listOf(
+                            CardBlack,
+                            SurfaceElevated,
+                            CardBlack
+                        )
                     )
                 )
                 .drawBehind {
-                    drawLine(
-                        color = if (isPlaying) CyanPrimary else Color(0xFF404040),
-                        start = Offset(0f, 0f),
-                        end = Offset(size.width * 0.3f, 0f),
-                        strokeWidth = 2.dp.toPx()
-                    )
+                    // Ligne de progression subtile en haut
+                    if (isPlaying) {
+                        drawLine(
+                            color = CyanPrimary.copy(alpha = 0.6f),
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width * 0.4f, 0f),
+                            strokeWidth = 2.dp.toPx()
+                        )
+                    }
                 }
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AnimatedMusicIcon(isPlaying = isPlaying)
+                // Vignette avec animation moderne
+                ModernMusicThumbnail(
+                    track = track,
+                    isPlaying = isPlaying
+                )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
+                // Info texte avec marquee
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    // ✅ CORRECTION : Animation marquee avec protection contre division par zéro
-                    MarqueeText(
+                    ModernMarqueeText(
                         text = track.title,
                         isPlaying = isPlaying,
                         style = MaterialTheme.typography.bodyMedium.copy(
@@ -168,12 +187,12 @@ private fun MiniPlayerContent(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
                         text = if (isRestoredState) "Appuyez pour reprendre" else track.artist,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFFAAAAAA),
+                            color = TextGrayLight,
                             fontSize = 12.sp
                         ),
                         maxLines = 1,
@@ -181,9 +200,10 @@ private fun MiniPlayerContent(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                PlayerControls(
+                // Contrôles modernisés
+                ModernPlayerControls(
                     isPlaying = isPlaying,
                     isEnabled = hasValidPlaylist && !isRestoredState,
                     onPlayPause = onPlayPause,
@@ -195,27 +215,20 @@ private fun MiniPlayerContent(
 }
 
 @Composable
-private fun AnimatedMusicIcon(isPlaying: Boolean) {
-    val infiniteTransition = rememberInfiniteTransition(label = "music_icon")
+private fun ModernMusicThumbnail(
+    track: Track,
+    isPlaying: Boolean
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "thumbnail_pulse")
 
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = if (isPlaying) 1.15f else 1f,
+        targetValue = if (isPlaying) 1.08f else 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = FastOutSlowInEasing),
+            animation = tween(800, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulse"
-    )
-
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = if (isPlaying) 1f else 0.6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
+        label = "scale"
     )
 
     Box(
@@ -223,10 +236,7 @@ private fun AnimatedMusicIcon(isPlaying: Boolean) {
             .size(48.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isPlaying)
-                    CyanPrimary.copy(alpha = 0.15f)
-                else
-                    Color(0xFF2A2A2A)
+                if (isPlaying) CyanAlpha15 else Color(0xFF252525)
             )
             .graphicsLayer {
                 if (isPlaying) {
@@ -236,6 +246,7 @@ private fun AnimatedMusicIcon(isPlaying: Boolean) {
             },
         contentAlignment = Alignment.Center
     ) {
+        // Effet de glow quand lecture active
         if (isPlaying) {
             Box(
                 modifier = Modifier
@@ -244,7 +255,7 @@ private fun AnimatedMusicIcon(isPlaying: Boolean) {
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                CyanPrimary.copy(alpha = alpha * 0.3f),
+                                CyanPrimary.copy(alpha = 0.15f),
                                 Color.Transparent
                             )
                         )
@@ -252,17 +263,60 @@ private fun AnimatedMusicIcon(isPlaying: Boolean) {
             )
         }
 
-        Icon(
-            imageVector = Icons.Rounded.MusicNote,
-            contentDescription = null,
-            tint = if (isPlaying) CyanPrimary else Color(0xFF666666),
-            modifier = Modifier.size(24.dp)
-        )
+        // Icône ou première lettre
+        if (track.title.isNotEmpty() && track.title != "Continuer la lecture") {
+            Text(
+                text = track.title.take(1).uppercase(),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = if (isPlaying) CyanPrimary else TextGray
+                )
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Rounded.MusicNote,
+                contentDescription = null,
+                tint = if (isPlaying) CyanPrimary else TextGray,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Indicateur de lecture visuel
+        if (isPlaying) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 4.dp)
+                    .height(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                repeat(3) { index ->
+                    val barHeight by infiniteTransition.animateFloat(
+                        initialValue = 3f,
+                        targetValue = 8f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(400 + index * 100, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "bar_$index"
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(2.dp)
+                            .height(barHeight.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(CyanPrimary)
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun PlayerControls(
+private fun ModernPlayerControls(
     isPlaying: Boolean,
     isEnabled: Boolean,
     onPlayPause: () -> Unit,
@@ -272,41 +326,50 @@ private fun PlayerControls(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FilledIconButton(
-            onClick = onPlayPause,
-            modifier = Modifier.size(44.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = if (isPlaying) CyanPrimary.copy(alpha = 0.2f) else Color(0xFF333333),
-                contentColor = if (isPlaying) CyanPrimary else Color.White
-            )
+        // Bouton Play/Pause moderne
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isPlaying) CyanPrimary else CyanAlpha15
+                )
+                .clickable(
+                    onClick = onPlayPause,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Lecture",
-                modifier = Modifier.size(28.dp)
+                tint = if (isPlaying) BackgroundBlack else CyanPrimary,
+                modifier = Modifier.size(26.dp)
             )
         }
 
+        // Bouton Suivant subtil
         IconButton(
             onClick = onNext,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(36.dp),
             enabled = isEnabled
         ) {
             Icon(
                 imageVector = Icons.Rounded.SkipNext,
                 contentDescription = "Suivant",
-                tint = if (isEnabled) Color(0xFFCCCCCC) else Color(0xFF444444),
-                modifier = Modifier.size(24.dp)
+                tint = if (isEnabled) TextGray else TextGray.copy(alpha = 0.3f),
+                modifier = Modifier.size(22.dp)
             )
         }
     }
 }
 
 /**
- * ✅ CORRECTION : Texte avec animation de défilement sécurisée
+ * Texte avec animation de défilement sécurisée
  */
 @Composable
-private fun MarqueeText(
+private fun ModernMarqueeText(
     text: String,
     isPlaying: Boolean,
     style: androidx.compose.ui.text.TextStyle,
@@ -317,31 +380,22 @@ private fun MarqueeText(
     var textWidth by remember { mutableIntStateOf(0) }
     var containerWidth by remember { mutableIntStateOf(0) }
 
-    // ✅ PROTECTION : Vitesse minimum pour éviter division par zéro
     val scrollSpeed = if (isPlaying) 40f else 25f
-
-    // ✅ PROTECTION : Ne pas animer si pas assez de place ou pas en lecture
     val shouldScroll = textWidth > containerWidth && containerWidth > 0 && isPlaying && textWidth > 0
-
-    // ✅ CORRECTION : Durée minimum de 1000ms pour éviter division par zéro
     val durationMillis = remember(textWidth, scrollSpeed) {
         if (textWidth > 0 && scrollSpeed > 0) {
             ((textWidth / scrollSpeed) * 1000).toInt().coerceAtLeast(1000)
         } else {
-            1000 // Valeur par défaut sécurisée
+            1000
         }
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "marquee")
-
     val offset by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = if (shouldScroll) -textWidth.toFloat() else 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = durationMillis,
-                easing = LinearEasing
-            ),
+            animation = tween(durationMillis, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "marquee_offset"
